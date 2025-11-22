@@ -3,171 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AI Face Tracker HUD</title>
+    <title>AI HUD Debug</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            overflow: hidden;
-            font-family: 'Courier New', Courier, monospace; /* Техно-шрифт */
-        }
-
-        /* Контейнер для видео и канваса */
-        .container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        /* Видео скрыто, мы рисуем его на канвасе или используем как подложку */
-        .input_video {
-            display: none;
-        }
-
-        /* Канвас поверх всего */
-        .output_canvas {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 1;
-        }
-
-        /* UI Слой (HUD) */
-        .hud-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-            pointer-events: none; /* Чтобы клики проходили сквозь интерфейс */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        /* Стеклянный интерфейс (Glassmorphism) */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        .container { position: relative; width: 100vw; height: 100vh; }
+        .input_video { display: none; }
+        .output_canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+        
+        /* HUD Layer */
+        .hud-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
+        
         .glass-panel {
             background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            padding: 15px;
-            color: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            transition: all 0.3s ease;
-        }
-
-        /* Верхняя панель */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60px;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 12px;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            background-color: #0f0;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #0f0;
-            animation: pulse 2s infinite;
-        }
-
-        /* Нижняя панель */
-        .bottom-stats {
-            display: flex;
-            justify-content: space-around;
-            height: 80px;
-            align-items: center;
-        }
-
-        .stat-item {
+            border-radius: 15px;
+            padding: 10px;
+            color: white;
             text-align: center;
         }
 
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
-
-        .stat-label {
-            font-size: 10px;
-            opacity: 0.7;
-            text-transform: uppercase;
-        }
-
-        /* Анимация пульсации */
-        @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
-            100% { opacity: 1; transform: scale(1); }
-        }
-
-        /* Загрузочный экран */
         #loader {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 10;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 14px;
-            letter-spacing: 2px;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0a0a; z-index: 20;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            color: #0f0; padding: 20px; text-align: center;
         }
+        
+        #error-log { color: #ff3333; margin-top: 20px; font-size: 12px; max-width: 80%; word-wrap: break-word; }
+        
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid rgba(0, 255, 0, 0.3);
+            border-top: 4px solid #0f0; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="loader">INITIALIZING AI SYSTEM...</div>
+    <div id="loader">
+        <div class="spinner"></div>
+        <div id="status-text">LOADING AI CORE...</div>
+        <div id="error-log"></div>
+    </div>
 
     <div class="container">
-        <video class="input_video" playsinline muted></video>
+        <video class="input_video" playsinline muted autoplay></video>
         <canvas class="output_canvas"></canvas>
-
+        
         <div class="hud-layer">
-            <div class="top-bar glass-panel">
-                <div class="status-indicator">
-                    <div class="dot"></div>
-                    SYSTEM ONLINE
-                </div>
-                <div style="font-size: 10px; opacity: 0.6;">120HZ TARGET</div>
+            <div class="glass-panel" style="align-self: flex-start;">
+                TARGET LOCKED: <span id="conf-score">--</span>
             </div>
-
-            <div class="bottom-stats glass-panel">
-                <div class="stat-item">
-                    <div class="stat-value" id="fps-counter">0</div>
-                    <div class="stat-label">FPS</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="conf-score">0%</div>
-                    <div class="stat-label">ACCURACY</div>
-                </div>
+            <div class="glass-panel" style="align-self: center; margin-bottom: 20px;">
+                FPS: <span id="fps-counter">0</span>
             </div>
         </div>
     </div>
@@ -178,184 +71,111 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
 
     <script>
+        // --- СИСТЕМА ОТЛОВКИ ОШИБОК ---
+        function logError(msg) {
+            document.getElementById('error-log').innerText = "ERR: " + msg;
+            document.getElementById('status-text').innerText = "SYSTEM FAILURE";
+            document.querySelector('.spinner').style.borderColor = 'red';
+        }
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            logError(msg + " line: " + lineNo);
+            return false;
+        };
+        // ------------------------------
+
         const videoElement = document.getElementsByClassName('input_video')[0];
         const canvasElement = document.getElementsByClassName('output_canvas')[0];
         const canvasCtx = canvasElement.getContext('2d');
-        const fpsOutput = document.getElementById('fps-counter');
-        const confOutput = document.getElementById('conf-score');
         const loader = document.getElementById('loader');
-
-        // Переменные для сглаживания (Lerp)
-        let currentX = 0, currentY = 0, currentR = 0;
-        let targetX = 0, targetY = 0, targetR = 0;
-        // Коэффициент сглаживания (0.1 - очень плавно/медленно, 0.3 - быстрее)
-        const smoothFactor = 0.2; 
         
-        let lastFrameTime = 0;
-        let isFaceDetected = false;
+        let lastTime = 0;
+        // Переменные анимации
+        let currX=0, currY=0, currR=0, targetX=0, targetY=0, targetR=0;
 
         function onResults(results) {
-            // Убираем загрузчик после первого кадра
+            // Успешный запуск - скрываем лоадер
             if (loader.style.display !== 'none') loader.style.display = 'none';
 
-            // Настраиваем размеры канваса под экран
             canvasElement.width = window.innerWidth;
             canvasElement.height = window.innerHeight;
-
-            // 1. Рисуем само видео с камеры
+            
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             
-            // Отражаем видео по горизонтали (как в зеркале) для удобства
+            // Отражаем и рисуем
             canvasCtx.translate(canvasElement.width, 0);
             canvasCtx.scale(-1, 1);
-            
-            // Рисуем изображение с камеры, растягивая на весь экран (object-fit: cover logic)
-            drawImageProp(canvasCtx, results.image, 0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            // 2. Логика обнаружения лица
             if (results.detections.length > 0) {
-                isFaceDetected = true;
-                const detection = results.detections[0];
-                const bbox = detection.boundingBox;
-                const score = detection.categories[0].score;
-
-                // Обновляем UI точности
-                confOutput.innerText = Math.round(score * 100) + '%';
-
-                // Вычисляем координаты (MediaPipe дает от 0.0 до 1.0)
-                // Нам нужно перевести это в пиксели канваса.
-                // Поскольку мы делаем "cover", расчеты сложнее, но для простоты берем по ширине/высоте канваса
+                const det = results.detections[0];
+                const box = det.boundingBox;
                 
-                // Центр лица
-                const faceCenterX = bbox.xCenter * canvasElement.width;
-                const faceCenterY = bbox.yCenter * canvasElement.height;
+                // Координаты (упрощенные для полного экрана)
+                targetX = box.xCenter * canvasElement.width;
+                targetY = box.yCenter * canvasElement.height;
+                targetR = (box.width * canvasElement.width) / 1.5;
                 
-                // Радиус (берем половину ширины или высоты, что больше)
-                const faceRadius = (Math.max(bbox.width, bbox.height) * canvasElement.width) / 1.6; // 1.6 чтобы круг был чуть больше лица
-
-                // Задаем цели для анимации
-                targetX = faceCenterX;
-                targetY = faceCenterY;
-                targetR = faceRadius;
-
+                document.getElementById('conf-score').innerText = Math.round(det.categories[0].score * 100) + "%";
             } else {
-                isFaceDetected = false;
-                confOutput.innerText = "SRCH";
-                // Если лицо потеряно, можно плавно убрать круг в 0 или оставить на последнем месте
-                targetR = 0; 
+                targetR = 0; // Если лицо пропало, радиус в 0
             }
 
-            // 3. Математика сглаживания (Linear Interpolation)
-            // Это делает движения "как по маслу" (120fps feel)
-            currentX = currentX + (targetX - currentX) * smoothFactor;
-            currentY = currentY + (targetY - currentY) * smoothFactor;
-            currentR = currentR + (targetR - currentR) * smoothFactor;
+            // Плавность (Lerp)
+            currX += (targetX - currX) * 0.2;
+            currY += (targetY - currY) * 0.2;
+            currR += (targetR - currR) * 0.2;
 
-            // 4. Рисуем HUD графику
-            if (currentR > 5) { // Рисуем только если радиус больше 5px
-                
-                // Белый круг
+            // Рисуем круг
+            if (currR > 1) {
                 canvasCtx.beginPath();
-                canvasCtx.arc(currentX, currentY, currentR, 0, 2 * Math.PI);
-                canvasCtx.lineWidth = 4;
-                canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-                canvasCtx.shadowBlur = 15;
-                canvasCtx.shadowColor = 'rgba(255, 255, 255, 0.8)';
-                canvasCtx.stroke();
-
-                // Тонкий декоративный круг внутри
-                canvasCtx.beginPath();
-                canvasCtx.arc(currentX, currentY, currentR * 1.1, 0, 2 * Math.PI); // Чуть больше
-                canvasCtx.lineWidth = 1;
-                canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-                canvasCtx.stroke();
-                
-                // Перекрестие
-                const crossSize = 10;
-                canvasCtx.beginPath();
-                canvasCtx.moveTo(currentX - crossSize, currentY);
-                canvasCtx.lineTo(currentX + crossSize, currentY);
-                canvasCtx.moveTo(currentX, currentY - crossSize);
-                canvasCtx.lineTo(currentX, currentY + crossSize);
-                canvasCtx.lineWidth = 2;
-                canvasCtx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+                canvasCtx.arc(currX, currY, currR, 0, 2 * Math.PI);
+                canvasCtx.lineWidth = 3;
+                canvasCtx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+                canvasCtx.shadowBlur = 20;
+                canvasCtx.shadowColor = "white";
                 canvasCtx.stroke();
             }
-
+            
             canvasCtx.restore();
 
-            // Счетчик FPS
+            // FPS
             const now = performance.now();
-            const fps = 1000 / (now - lastFrameTime);
-            lastFrameTime = now;
-            if (now % 10 < 1) fpsOutput.innerText = Math.round(fps); // Обновляем не каждый кадр, чтобы не мелькало
-        }
-
-        // Настройка FaceDetection
-        const faceDetection = new FaceDetection({locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
-        }});
-
-        faceDetection.setOptions({
-            modelSelection: 1, // 0 - для близкого расстояния (быстрее), 1 - дальнего (точнее)
-            minDetectionConfidence: 0.6
-        });
-
-        faceDetection.onResults(onResults);
-
-        // Запуск камеры
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await faceDetection.send({image: videoElement});
-            },
-            width: 1280,
-            height: 720,
-            facingMode: "user" // Фронтальная камера
-        });
-        
-        // Вспомогательная функция для имитации object-fit: cover на canvas
-        function drawImageProp(ctx, img, x, y, w, h, offsetX, offsetY) {
-            if (arguments.length === 2) {
-                x = y = 0;
-                w = ctx.canvas.width;
-                h = ctx.canvas.height;
+            if (now - lastTime >= 1000) {
+                 // Упрощенный FPS
             }
-            offsetX = typeof offsetX === "number" ? offsetX : 0.5;
-            offsetY = typeof offsetY === "number" ? offsetY : 0.5;
-
-            if (offsetX < 0) offsetX = 0;
-            if offsetY < 0) offsetY = 0;
-            if (offsetX > 1) offsetX = 1;
-            if (offsetY > 1) offsetY = 1;
-
-            var iw = img.width,
-                ih = img.height,
-                r = Math.min(w / iw, h / ih),
-                nw = iw * r,
-                nh = ih * r,
-                cx, cy, cw, ch, ar = 1;
-
-            if (nw < w) ar = w / nw;
-            if (Math.abs(ar - 1) < 1e-14 && nh < h) ar = h / nh;
-            nw *= ar;
-            nh *= ar;
-
-            cw = iw / (nw / w);
-            ch = ih / (nh / h);
-
-            cx = (iw - cw) * offsetX;
-            cy = (ih - ch) * offsetY;
-
-            if (cx < 0) cx = 0;
-            if (cy < 0) cy = 0;
-            if (cw > iw) cw = iw;
-            if (ch > ih) ch = ih;
-
-            ctx.drawImage(img, cx, cy, cw, ch,  x, y, w, h);
+            document.getElementById('fps-counter').innerText = Math.round(1000 / (now - lastTime));
+            lastTime = now;
         }
 
-        camera.start();
+        try {
+            const faceDetection = new FaceDetection({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+            }});
+
+            faceDetection.setOptions({
+                modelSelection: 0, // 0 - легче и быстрее (Short Range), лучше для селфи
+                minDetectionConfidence: 0.5
+            });
+            
+            faceDetection.onResults(onResults);
+
+            const camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await faceDetection.send({image: videoElement});
+                },
+                width: 640, // Снизил разрешение для скорости загрузки
+                height: 480,
+                facingMode: "user"
+            });
+
+            camera.start()
+                .then(() => console.log("Camera started"))
+                .catch(e => logError("Camera Access Denied: " + e.message));
+
+        } catch (e) {
+            logError("Init Error: " + e.message);
+        }
     </script>
 </body>
 </html>
