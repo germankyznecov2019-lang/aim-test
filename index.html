@@ -3,302 +3,344 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>Eye Gaze Tracker</title>
+    <title>Face & Body AR</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #000; height: 100vh; overflow: hidden; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; }
         
-        .camera-view { position: relative; width: 100%; height: 100%; }
+        .camera-container { position: relative; width: 100%; height: 100%; }
         
         video {
             position: absolute; width: 100%; height: 100%; object-fit: cover;
-            transform: scaleX(-1); /* Зеркалим для селфи */
+            transition: transform 0.5s;
         }
+        
+        /* Зеркалирование только для селфи */
+        video.mirrored { transform: scaleX(-1); }
         
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
-        /* Стеклянный интерфейс */
+        /* Интерфейс */
         .ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-            display: flex; flex-direction: column; justify-content: space-between; padding: 40px 20px;
-        }
-
-        .status-badge {
-            align-self: center;
-            background: rgba(20, 0, 0, 0.6);
-            border: 1px solid rgba(255, 50, 50, 0.3);
-            color: #ff4444;
-            padding: 8px 16px; border-radius: 20px;
-            font-weight: bold; font-size: 14px;
-            backdrop-filter: blur(10px);
-            display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.2);
-        }
-        
-        .status-dot { width: 8px; height: 8px; background: #ff4444; border-radius: 50%; box-shadow: 0 0 10px #ff0000; }
-
-        .controls {
-            pointer-events: auto;
-            display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;
+            position: absolute; bottom: 40px; left: 0; width: 100%;
+            display: flex; justify-content: center; align-items: center; gap: 30px;
+            pointer-events: none; z-index: 10;
         }
 
         .btn {
-            width: 70px; height: 70px; border-radius: 50%; border: none;
-            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white; font-size: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center;
-            transition: 0.2s;
+            pointer-events: auto;
+            width: 60px; height: 60px; border-radius: 50%; border: none;
+            background: rgba(255, 255, 255, 0.1); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: 0.3s; cursor: pointer;
         }
-        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.25); }
-        
-        .btn-rec.recording {
-            background: rgba(255, 0, 0, 0.3); border-color: red; color: red;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(255,0,0,0.4);} 70% {box-shadow: 0 0 0 15px rgba(255,0,0,0);} 100% {box-shadow: 0 0 0 0 rgba(255,0,0,0);} }
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
+        .btn svg { width: 26px; height: 26px; fill: currentColor; }
 
-        #loader {
-            position: absolute; z-index: 99; background: #000; width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center; color: white; flex-direction: column; gap: 15px;
+        /* Кнопка смены режима (Face/Body) */
+        .btn-mode {
+            width: 75px; height: 75px; /* Чуть больше */
+            border-color: #00ffcc; color: #00ffcc;
+            background: rgba(0, 255, 204, 0.1);
         }
+        .btn-mode.body-active {
+            border-color: #ff0000; color: #ff0000;
+            background: rgba(255, 0, 0, 0.15);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+        }
+
+        /* Активная кнопка фонарика */
+        .btn.active {
+            background: rgba(255, 200, 0, 0.2); border-color: #ffcc00; color: #ffcc00;
+            box-shadow: 0 0 20px rgba(255, 200, 0, 0.4);
+        }
+        .btn:disabled { opacity: 0.3; filter: grayscale(1); }
+
+        /* Загрузчик */
+        #loader {
+            position: absolute; top:0; left:0; width: 100%; height: 100%; background: #000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 99;
+            color: #888; gap: 15px; transition: opacity 0.5s;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #00ffcc; border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .status-text {
+            position: absolute; top: 120px; width: 100%; text-align: center;
+            color: rgba(255,255,255,0.7); font-size: 14px; text-shadow: 0 1px 3px black;
+        }
+
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <div style="width: 30px; height: 30px; border: 3px solid #333; border-top: 3px solid red; border-radius: 50%; animation: spin 1s infinite linear;"></div>
-        <span>Загрузка ИИ...</span>
+        <div class="spinner"></div>
+        <span id="loader-text">Загрузка Face AI...</span>
     </div>
 
-    <div class="camera-view">
+    <div class="camera-container">
         <video id="video" autoplay muted playsinline></video>
         <canvas id="canvas"></canvas>
+        <div class="status-text" id="status-text"></div>
         
         <div class="ui-layer">
-            <div class="status-badge">
-                <div class="status-dot"></div>
-                <span id="status-text">SYSTEM INIT</span>
-            </div>
-            
-            <div class="controls">
-                <button class="btn" id="btn-photo">📷</button>
-                <button class="btn btn-rec" id="btn-video">⭕</button>
-            </div>
+            <button class="btn" id="btn-torch" disabled>
+                <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/></svg>
+            </button>
+
+            <button class="btn btn-mode" id="btn-mode">
+                <svg id="icon-face" viewBox="0 0 24 24"><path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21 1.17.33 2.3.33 3.26 0 3.86-3.59 7-8 7z"/></svg>
+                <svg id="icon-body" style="display:none" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg>
+            </button>
+
+            <button class="btn" id="btn-flip">
+                <svg viewBox="0 0 24 24"><path d="M20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 11.5V13H9v2.5L5.5 12 9 8.5V11h6V8.5l3.5 3.5-3.5 3.5z"/></svg>
+            </button>
         </div>
     </div>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const statusText = document.getElementById('status-text');
         const loader = document.getElementById('loader');
+        const loaderText = document.getElementById('loader-text');
+        const statusText = document.getElementById('status-text');
         
-        // Ссылка на модели
-        const MODELS_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-
-        let isModelLoaded = false;
+        const btnMode = document.getElementById('btn-mode');
+        const iconFace = document.getElementById('icon-face');
+        const iconBody = document.getElementById('icon-body');
         
-        // Переменные для записи
-        let mediaRecorder;
-        let recordedChunks = [];
-        let isRecording = false;
+        const btnFlip = document.getElementById('btn-flip');
+        const btnTorch = document.getElementById('btn-torch');
 
-        // 1. Загрузка моделей (Детектор лиц + Точки лица)
-        async function loadModels() {
+        // Состояние
+        let currentMode = 'face'; // 'face' или 'body'
+        let currentFacingMode = 'user';
+        let isTorchOn = false;
+        let stream = null;
+        
+        // Статусы моделей
+        let isFaceModelLoaded = false;
+        let faceModels = null;
+        let bodyModel = null;
+        
+        // URL
+        const FACE_MODELS_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+
+        // 1. Инициализация (загружаем только Face сначала)
+        async function init() {
             try {
                 await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
-                    faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL) // Важно: модель точек лица
+                    faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODELS_URL),
+                    faceapi.nets.faceLandmark68TinyNet.loadFromUri(FACE_MODELS_URL)
                 ]);
-                isModelLoaded = true;
+                isFaceModelLoaded = true;
+                loader.style.display = 'none';
                 startCamera();
             } catch (err) {
-                alert("Ошибка загрузки моделей: " + err);
+                alert("Ошибка загрузки Face API: " + err);
             }
         }
 
         // 2. Камера
         async function startCamera() {
+            if (stream) stream.getTracks().forEach(track => track.stop());
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
                 });
                 video.srcObject = stream;
-            } catch (e) {
-                alert("Ошибка камеры. Откройте сайт через HTTPS.");
+                
+                // Настройка UI
+                if (currentFacingMode === 'user') {
+                    video.classList.add('mirrored');
+                    btnTorch.disabled = true;
+                } else {
+                    video.classList.remove('mirrored');
+                    btnTorch.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Нет доступа к камере");
             }
         }
 
-        // 3. Главный цикл
+        // 3. Логика отрисовки
         video.addEventListener('play', () => {
-            loader.style.display = 'none';
-            statusText.innerText = "SCANNING...";
-            
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(canvas, displaySize);
 
+            // Единый цикл
             setInterval(async () => {
-                if (!isModelLoaded) return;
-
-                // Ищем лица И точки на них
-                const detections = await faceapi.detectAllFaces(
-                    video, 
-                    new faceapi.TinyFaceDetectorOptions()
-                ).withFaceLandmarks(true);
-
-                const resizedDetections = faceapi.resizeResults(detections, displaySize);
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                if (resizedDetections.length > 0) {
-                    statusText.innerText = "TARGET LOCKED";
-                    statusText.style.color = "#ff4444";
-                } else {
-                    statusText.innerText = "SEARCHING...";
-                    statusText.style.color = "white";
+                if (video.paused || video.ended) return;
+
+                // --- РЕЖИМ ЛИЦА ---
+                if (currentMode === 'face' && isFaceModelLoaded) {
+                    const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks(true);
+                    
+                    // Обновляем размер при ресайзе
+                    const dims = faceapi.matchDimensions(canvas, video, true);
+                    const resizedDetections = faceapi.resizeResults(detections, dims);
+
+                    resizedDetections.forEach(det => {
+                        const box = det.detection.box;
+                        const landmarks = det.landmarks;
+                        
+                        let centerX, centerY, radius;
+                        
+                        if (currentFacingMode === 'user') {
+                            // Зеркально
+                            centerX = canvas.width - (box.x + box.width/2);
+                            drawFaceUI(ctx, centerX, box.y + box.height/2, box.width/1.6, landmarks, true);
+                        } else {
+                            // Нормально
+                            centerX = box.x + box.width/2;
+                            drawFaceUI(ctx, centerX, box.y + box.height/2, box.width/1.6, landmarks, false);
+                        }
+                    });
                 }
 
-                resizedDetections.forEach(det => {
-                    // 1. РИСУЕМ БОЛЬШОЙ КРУГ ВОКРУГ ЛИЦА
-                    drawFaceCircle(ctx, det.detection.box);
+                // --- РЕЖИМ ТЕЛА ---
+                if (currentMode === 'body' && bodyModel) {
+                    const predictions = await bodyModel.detect(video);
+                    
+                    predictions.forEach(prediction => {
+                        if (prediction.class === 'person') {
+                            const [x, y, width, height] = prediction.bbox;
+                            
+                            // Рисуем КРАСНУЮ рамку
+                            ctx.lineWidth = 4;
+                            ctx.strokeStyle = '#ff0000';
+                            ctx.shadowColor = '#ff0000';
+                            ctx.shadowBlur = 20;
 
-                    // 2. ПОЛУЧАЕМ КООРДИНАТЫ ГЛАЗ
-                    const landmarks = det.landmarks;
-                    const leftEye = landmarks.getLeftEye();
-                    const rightEye = landmarks.getRightEye();
-                    const nose = landmarks.getNose();
+                            // Скругляем углы рамки для стиля
+                            roundRect(ctx, x, y, width, height, 20);
+                            ctx.stroke();
 
-                    // 3. РИСУЕМ КРАСНУЮ ОБВОДКУ ГЛАЗ
-                    drawEyeOutline(ctx, leftEye);
-                    drawEyeOutline(ctx, rightEye);
+                            // Текст
+                            ctx.font = "bold 16px Arial";
+                            ctx.fillStyle = '#ff0000';
+                            ctx.fillText(`HUMAN ${Math.round(prediction.score*100)}%`, x + 10, y + 25);
+                        }
+                    });
+                }
 
-                    // 4. РИСУЕМ НАПРАВЛЕНИЕ ВЗГЛЯДА (Лазеры)
-                    // Вычисляем вектор "куда смотрит лицо" на основе носа
-                    // Верх носа - точка 0, Низ носа - точка 4 (в массиве носа)
-                    const noseTop = nose[0];
-                    const noseBottom = nose[3]; // Кончик носа
-
-                    // Вектор направления (от переносицы к кончику)
-                    const gazeVector = {
-                        x: (noseBottom.x - noseTop.x) * 8, // Усиливаем длину
-                        y: (noseBottom.y - noseTop.y) * 8
-                    };
-
-                    drawGaze(ctx, leftEye, gazeVector);
-                    drawGaze(ctx, rightEye, gazeVector);
-                });
-
-            }, 80); // Частота обновления
+            }, 100);
         });
 
-        // --- ФУНКЦИИ ОТРИСОВКИ ---
+        // --- Переключение режима ---
+        btnMode.addEventListener('click', async () => {
+            if (currentMode === 'face') {
+                // Переключаем на BODY
+                currentMode = 'body';
+                btnMode.classList.add('body-active');
+                iconFace.style.display = 'none';
+                iconBody.style.display = 'block';
+                statusText.innerText = "Загрузка Body AI...";
+                
+                // Если модель тела еще не загружена, грузим
+                if (!bodyModel) {
+                    loader.style.display = 'flex';
+                    loaderText.innerText = "Калибровка сканера тела...";
+                    try {
+                        bodyModel = await cocoSsd.load({ base: 'lite_mobilenet_v2' }); // Lite версия
+                    } catch(e) {
+                        alert("Ошибка загрузки Body AI");
+                        currentMode = 'face'; // Возврат при ошибке
+                    }
+                    loader.style.display = 'none';
+                }
+                statusText.innerText = "";
 
-        function drawFaceCircle(ctx, box) {
-            // Зеркалим координаты X, так как видео отзеркалено CSS-ом
-            // Но канвас рисует прямо. Нужно считать X справа.
-            const centerX = canvas.width - (box.x + box.width / 2);
-            const centerY = box.y + box.height / 2;
-            const radius = box.width / 1.6;
+            } else {
+                // Переключаем обратно на FACE
+                currentMode = 'face';
+                btnMode.classList.remove('body-active');
+                iconFace.style.display = 'block';
+                iconBody.style.display = 'none';
+            }
+        });
 
+        // --- Вспомогательные функции рисования ---
+        
+        function drawFaceUI(ctx, x, y, r, landmarks, isMirrored) {
+            // Круг
             ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.arc(x, y, r, 0, 2 * Math.PI);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
             ctx.shadowColor = '#00ffcc';
-            ctx.shadowBlur = 15;
+            ctx.shadowBlur = 20;
             ctx.stroke();
+            
+            // Глаза
+            drawEye(ctx, landmarks.getLeftEye(), isMirrored);
+            drawEye(ctx, landmarks.getRightEye(), isMirrored);
         }
 
-        function drawEyeOutline(ctx, points) {
+        function drawEye(ctx, points, isMirrored) {
             ctx.beginPath();
-            // Зеркалим каждую точку глаза
-            const firstX = canvas.width - points[0].x;
-            ctx.moveTo(firstX, points[0].y);
+            const startX = isMirrored ? canvas.width - points[0].x : points[0].x;
+            ctx.moveTo(startX, points[0].y);
             
             for (let i = 1; i < points.length; i++) {
-                const x = canvas.width - points[i].x;
-                ctx.lineTo(x, points[i].y);
+                const px = isMirrored ? canvas.width - points[i].x : points[i].x;
+                ctx.lineTo(px, points[i].y);
             }
             ctx.closePath();
-            
             ctx.lineWidth = 2;
-            ctx.strokeStyle = '#ff0000'; // Красный
+            ctx.strokeStyle = '#ff0000';
             ctx.shadowColor = '#ff0000';
             ctx.shadowBlur = 10;
             ctx.stroke();
         }
-
-        function drawGaze(ctx, eyePoints, vector) {
-            // Находим центр глаза
-            let sumX = 0, sumY = 0;
-            eyePoints.forEach(p => { sumX += p.x; sumY += p.y; });
-            
-            const centerX = canvas.width - (sumX / eyePoints.length); // Зеркалим центр
-            const centerY = sumY / eyePoints.length;
-
-            // Рисуем линию взгляда
+        
+        // Функция для красивой рамки
+        function roundRect(ctx, x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
             ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            // Линия идет ОТ центра ПЛЮС вектор
-            // Важно: vector.x нужно вычитать, т.к. мы в зеркальном режиме
-            ctx.lineTo(centerX - vector.x, centerY + vector.y);
-            
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = 'rgba(255, 50, 50, 0.6)'; // Полупрозрачный луч
-            ctx.stroke();
-            
-            // Точка в центре глаза
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 3, 0, Math.PI*2);
-            ctx.fillStyle = 'red';
-            ctx.fill();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
         }
-        
-        // --- ЗАПИСЬ И ФОТО ---
 
-        document.getElementById('btn-photo').onclick = () => {
-            const link = document.createElement('a');
-            link.download = 'cyber-face.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        };
+        // --- Кнопки Фонарик и Флип ---
+        btnFlip.addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            startCamera();
+        });
 
-        const btnVideo = document.getElementById('btn-video');
-        btnVideo.onclick = () => {
-            if (isRecording) {
-                mediaRecorder.stop();
-                isRecording = false;
-                btnVideo.classList.remove('recording');
-            } else {
-                const stream = canvas.captureStream(30);
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-                recordedChunks = [];
-                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = 'cyber-video.webm'; a.click();
-                };
-                mediaRecorder.start();
-                isRecording = true;
-                btnVideo.classList.add('recording');
-            }
-        };
-        
-        // Стили анимации загрузки
-        const style = document.createElement('style');
-        style.innerHTML = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
-        document.head.appendChild(style);
+        btnTorch.addEventListener('click', async () => {
+            if (!stream) return;
+            const track = stream.getVideoTracks()[0];
+            try {
+                isTorchOn = !isTorchOn;
+                await track.applyConstraints({ advanced: [{ torch: isTorchOn }] });
+                btnTorch.classList.toggle('active', isTorchOn);
+            } catch (e) { alert("Фонарик недоступен"); isTorchOn = !isTorchOn; }
+        });
 
-        // Старт при загрузке
-        window.onload = () => {
-            if(typeof faceapi !== 'undefined') loadModels();
-            else alert("Ошибка библиотеки face-api");
-        };
-
+        window.onload = init;
     </script>
 </body>
 </html>
