@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>Red Vision Pro</title>
+    <title>Red Vision Debug</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         
@@ -15,24 +15,27 @@
             display: flex; justify-content: center; align-items: center;
         }
 
-        /* --- ЗАГРУЗКА --- */
-        #loading-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999;
-            display: flex; justify-content: center; align-items: center;
-            transition: opacity 0.5s;
-        }
-        .loading-text {
-            color: #ff0000; font-size: 24px; font-weight: 900; letter-spacing: 2px;
-            animation: pulse 1s infinite alternate;
-        }
-        @keyframes pulse { from { text-shadow: 0 0 10px #500; opacity: 0.5; } to { text-shadow: 0 0 25px #f00; opacity: 1; } }
-
         /* --- КАМЕРА --- */
         .viewport { position: relative; width: 100%; height: 100%; }
-        video { position: absolute; width: 100%; height: 100%; object-fit: cover; }
-        video.mirrored { transform: scaleX(-1); } /* Для селфи */
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        video {
+            position: absolute; width: 100%; height: 100%; object-fit: cover;
+            opacity: 0; transition: opacity 1s; /* Плавное появление */
+        }
+        video.active { opacity: 1; }
+        video.mirrored { transform: scaleX(-1); }
+
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
+
+        /* --- КОНСОЛЬ ОТЛАДКИ (Видно что происходит) --- */
+        #debug-console {
+            position: absolute; top: 10px; left: 10px; z-index: 20;
+            color: #00ff00; font-size: 12px; pointer-events: none;
+            background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px;
+            max-width: 300px;
+        }
+        .log-error { color: #ff0000; font-weight: bold; }
+        .log-warn { color: yellow; }
 
         /* --- UI ИНТЕРФЕЙС --- */
         .ui-layer {
@@ -43,11 +46,10 @@
             z-index: 10;
         }
 
-        /* Слайдер Зума */
         .zoom-container {
             width: 80%; display: flex; align-items: center; justify-content: space-between;
             margin-bottom: 25px; color: #ff0000; font-weight: bold; font-size: 14px;
-            opacity: 0; transition: opacity 0.3s; pointer-events: none; /* Скрыт по умолчанию */
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
         }
         .zoom-container.visible { opacity: 1; pointer-events: auto; }
 
@@ -59,31 +61,31 @@
             border: 2px solid #ff0000; border-radius: 50%; box-shadow: 0 0 10px #ff0000;
         }
 
-        /* Кнопки */
         .controls { display: flex; gap: 40px; }
-
         .btn {
             width: 60px; height: 60px; border-radius: 50%;
-            background: rgba(20, 0, 0, 0.6);
-            border: 1px solid rgba(255, 0, 0, 0.5);
-            color: #ff0000;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.1);
-            transition: all 0.2s; cursor: pointer;
+            background: rgba(20, 0, 0, 0.6); border: 1px solid rgba(255, 0, 0, 0.5);
+            color: #ff0000; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.1); transition: all 0.2s; cursor: pointer;
         }
-        .btn svg { width: 28px; height: 28px; fill: currentColor; }
-        
         .btn:active { transform: scale(0.95); background: rgba(255, 0, 0, 0.2); }
         .btn.active { background: rgba(255, 0, 0, 0.3); box-shadow: 0 0 25px rgba(255, 0, 0, 0.6); border-color: #ff0000; }
-        .btn:disabled { opacity: 0.3; border-color: #555; color: #555; box-shadow: none; pointer-events: none; }
+        .btn svg { width: 28px; height: 28px; fill: currentColor; }
+
+        /* Сообщение о загрузке по центру */
+        #center-status {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: red; font-weight: bold; font-size: 20px; text-align: center;
+            text-shadow: 0 0 10px red; pointer-events: none; z-index: 15;
+        }
 
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">
-        <div class="loading-text" id="status-text">ЗАГРУЗКА СИСТЕМЫ...</div>
-    </div>
+    <div id="debug-console">System Start...</div>
+    
+    <div id="center-status">ЗАПУСК КАМЕРЫ...</div>
 
     <div class="viewport">
         <video id="video" autoplay muted playsinline></video>
@@ -97,13 +99,8 @@
             </div>
 
             <div class="controls">
-                <button class="btn" id="btn-torch">
-                    <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
-                </button>
-                
-                <button class="btn" id="btn-flip">
-                    <svg viewBox="0 0 24 24"><path d="M20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 11.5V13H9v2.5L5.5 12 9 8.5V11h6V8.5l3.5 3.5-3.5 3.5z"/></svg>
-                </button>
+                <button class="btn" id="btn-torch"><svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg></button>
+                <button class="btn" id="btn-flip"><svg viewBox="0 0 24 24"><path d="M20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 11.5V13H9v2.5L5.5 12 9 8.5V11h6V8.5l3.5 3.5-3.5 3.5z"/></svg></button>
             </div>
         </div>
     </div>
@@ -113,194 +110,197 @@
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const statusText = document.getElementById('status-text');
-        const loadingScreen = document.getElementById('loading-screen');
+        const debugConsole = document.getElementById('debug-console');
+        const centerStatus = document.getElementById('center-status');
         
         const btnTorch = document.getElementById('btn-torch');
         const btnFlip = document.getElementById('btn-flip');
         const zoomUi = document.getElementById('zoom-ui');
         const zoomSlider = document.getElementById('zoom-slider');
-        const zoomMaxText = document.getElementById('zoom-max-text');
 
         // Настройки
-        let currentFacingMode = 'environment'; // Начинаем с задней камеры
+        let currentFacingMode = 'environment'; 
         let stream = null;
         let track = null;
         let isTorchOn = false;
         let isModelLoaded = false;
-        
-        // Модель
-        const DETECTOR_OPTIONS = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.2 });
-        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
 
-        // 1. Старт
-        async function init() {
-            try {
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
-                ]);
-                isModelLoaded = true;
-                statusText.innerText = "ИНИЦИАЛИЗАЦИЯ КАМЕРЫ...";
-                startCamera();
-            } catch (err) {
-                statusText.innerText = "ОШИБКА СИСТЕМЫ";
-                statusText.style.color = "red";
-            }
+        // Логгер на экран
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.innerText = `> ${msg}`;
+            if (type === 'error') div.className = 'log-error';
+            debugConsole.appendChild(div);
+            // Удаляем старые логи, чтобы не засорять
+            if (debugConsole.children.length > 5) debugConsole.removeChild(debugConsole.firstChild);
         }
 
-        // 2. Логика камеры (со всеми проверками)
+        // 1. СНАЧАЛА ЗАПУСКАЕМ КАМЕРУ (Чтобы не было черного экрана)
+        async function init() {
+            log("Запрос камеры...");
+            await startCamera(); // Ждем камеру
+            log("Камера работает. Загрузка AI...");
+            
+            // Загружаем модели в фоне
+            loadAI();
+        }
+
         async function startCamera() {
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-            }
+            if (stream) stream.getTracks().forEach(t => t.stop());
 
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: currentFacingMode,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 60 } // Пытаемся выжать FPS
+                        width: { ideal: 1280 }, height: { ideal: 720 }
                     }
                 });
                 video.srcObject = stream;
                 
-                // Получаем трек для управления зумом и вспышкой
+                // Ждем пока видео реально пойдет
+                video.onloadeddata = () => {
+                    video.classList.add('active');
+                    centerStatus.innerText = "ЗАГРУЗКА НЕЙРОСЕТИ...";
+                };
+
+                // Настройки зума и фонарика
                 track = stream.getVideoTracks()[0];
-                const capabilities = track.getCapabilities();
-
-                // --- НАСТРОЙКА ЗУМА ---
-                if ('zoom' in capabilities) {
+                const caps = track.getCapabilities();
+                
+                if ('zoom' in caps) {
                     zoomUi.classList.add('visible');
-                    zoomSlider.min = capabilities.zoom.min;
-                    zoomSlider.max = capabilities.zoom.max;
-                    zoomSlider.step = capabilities.zoom.step;
-                    zoomSlider.value = 1;
-                    zoomMaxText.innerText = Math.round(capabilities.zoom.max) + "x";
-                } else {
-                    zoomUi.classList.remove('visible');
-                }
+                    zoomSlider.min = caps.zoom.min;
+                    zoomSlider.max = caps.zoom.max;
+                    zoomSlider.step = caps.zoom.step;
+                } else { zoomUi.classList.remove('visible'); }
 
-                // --- НАСТРОЙКА ФОНАРИКА ---
-                // Фонарик обычно есть только если есть 'torch' в capabilities
-                // Но на iPhone иногда не показывает, но работает, поэтому просто чекаем заднюю камеру
+                // Настройки UI
                 if (currentFacingMode === 'environment') {
+                    video.classList.remove('mirrored');
                     btnTorch.disabled = false;
                 } else {
-                    btnTorch.disabled = true; // На селфи выключаем
-                    video.classList.add('mirrored'); // И зеркалим видео
+                    video.classList.add('mirrored');
+                    btnTorch.disabled = true;
                 }
                 
-                if(currentFacingMode === 'environment') video.classList.remove('mirrored');
-
-                // Сброс кнопки фонарика
                 isTorchOn = false;
                 btnTorch.classList.remove('active');
 
             } catch (err) {
-                console.error(err);
-                statusText.innerText = "КАМЕРА НЕДОСТУПНА";
+                log("ОШИБКА КАМЕРЫ: " + err.message, 'error');
+                centerStatus.innerText = "НЕТ ДОСТУПА К КАМЕРЕ";
+                alert("Разрешите доступ к камере или откройте через HTTPS!");
             }
         }
 
-        // 3. Обработчики кнопок
-        
-        // Флип камеры
-        btnFlip.addEventListener('click', () => {
-            currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
-            // Анимация иконки
-            btnFlip.style.transform = "rotate(360deg)";
-            setTimeout(() => btnFlip.style.transform = "rotate(0deg)", 300);
-            startCamera();
-        });
-
-        // Фонарик
-        btnTorch.addEventListener('click', async () => {
-            if (!track) return;
+        // 2. ЗАГРУЗКА МОДЕЛЕЙ (С тайм-аутом и диагностикой)
+        async function loadAI() {
             try {
-                isTorchOn = !isTorchOn;
-                await track.applyConstraints({ advanced: [{ torch: isTorchOn }] });
-                btnTorch.classList.toggle('active', isTorchOn);
-            } catch (e) {
-                alert("Фонарик недоступен на этом устройстве");
-                isTorchOn = !isTorchOn; // Откат
-            }
-        });
-
-        // Зум
-        zoomSlider.addEventListener('input', (e) => {
-            if (!track) return;
-            const zoomVal = parseFloat(e.target.value);
-            track.applyConstraints({ advanced: [{ zoom: zoomVal }] });
-        });
-
-        // 4. Петля отрисовки (AI)
-        video.addEventListener('play', () => {
-            loadingScreen.style.opacity = '0';
-            setTimeout(() => loadingScreen.style.display = 'none', 500);
-
-            const displaySize = { width: video.clientWidth, height: video.clientHeight };
-            faceapi.matchDimensions(canvas, displaySize);
-
-            const loop = async () => {
-                if (video.paused || video.ended) return;
-
-                // Для скорости - detectSingleFace
-                const detection = await faceapi.detectSingleFace(video, DETECTOR_OPTIONS).withAgeAndGender();
+                // Используем более быстрый CDN (githack)
+                const MODEL_URL = 'https://rawcdn.githack.com/justadudewhohacks/face-api.js/master/weights';
                 
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
+                ]);
 
-                if (detection) {
-                    // Ресайз под текущий размер экрана (важно при зуме, хотя зум оптический, но канвас статичен)
-                    // Тут есть нюанс: оптический зум не меняет координаты внутри видеопотока, 
-                    // поэтому face-api сам "найдет" увеличенное лицо. 
-                    const dims = faceapi.matchDimensions(canvas, video, true);
-                    const resized = faceapi.resizeResults(detection, dims);
-                    
-                    const box = resized.detection.box;
-                    const age = Math.round(resized.age);
+                isModelLoaded = true;
+                log("AI Загружен!");
+                centerStatus.style.display = 'none'; // Скрываем текст по центру
+                startDetection();
 
-                    // Зеркалирование координат для отрисовки, если селфи
-                    let centerX, leftX;
-                    if (currentFacingMode === 'user') {
-                         centerX = canvas.width - (box.x + box.width / 2);
-                    } else {
-                         centerX = box.x + box.width / 2;
-                    }
-                    
-                    const centerY = box.y + box.height / 2;
-                    const radius = (box.width / 1.5);
-
-                    // Рисуем Круг
-                    ctx.shadowColor = '#ff0000';
-                    ctx.shadowBlur = 20;
-                    ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = '#ff0000';
-                    ctx.stroke();
-
-                    // Рисуем Текст
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = '#ff0000';
-                    ctx.font = "bold 20px 'Courier New'";
-                    ctx.textAlign = "center";
-                    ctx.fillText(`~${age} YEARS`, centerX, centerY - radius - 15);
+            } catch (err) {
+                log("Сбой CDN 1. Пробую резерв...", 'warn');
+                try {
+                    // Резервный источник (GitHub Pages - медленнее)
+                    const BACKUP_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(BACKUP_URL),
+                        faceapi.nets.ageGenderNet.loadFromUri(BACKUP_URL)
+                    ]);
+                    isModelLoaded = true;
+                    log("AI Загружен (Резерв)!");
+                    centerStatus.style.display = 'none';
+                    startDetection();
+                } catch (finalErr) {
+                    log("ОШИБКА AI: " + finalErr.message, 'error');
+                    centerStatus.innerText = "ОШИБКА ИНТЕРНЕТА";
                 }
-                
+            }
+        }
+
+        // 3. ЦИКЛ ОТРИСОВКИ
+        function startDetection() {
+            const canvasCtx = canvas.getContext('2d');
+            
+            const loop = async () => {
+                if (!video.paused && !video.ended && isModelLoaded) {
+                    
+                    // Обновляем размер канваса если изменился
+                    if (canvas.width !== video.clientWidth) {
+                        faceapi.matchDimensions(canvas, { width: video.clientWidth, height: video.clientHeight });
+                    }
+
+                    // Детекция
+                    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.2 });
+                    const result = await faceapi.detectSingleFace(video, options).withAgeAndGender();
+
+                    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    if (result) {
+                        const dims = faceapi.matchDimensions(canvas, video, true);
+                        const resized = faceapi.resizeResults(result, dims);
+                        const box = resized.detection.box;
+
+                        // Координаты
+                        let cx = box.x + box.width / 2;
+                        if (currentFacingMode === 'user') cx = canvas.width - cx; // Зеркалим для селфи
+
+                        const cy = box.y + box.height / 2;
+                        const r = box.width / 1.5;
+
+                        // Круг
+                        canvasCtx.shadowColor = '#ff0000';
+                        canvasCtx.shadowBlur = 20;
+                        canvasCtx.beginPath();
+                        canvasCtx.arc(cx, cy, r, 0, 2 * Math.PI);
+                        canvasCtx.lineWidth = 3;
+                        canvasCtx.strokeStyle = '#ff0000';
+                        canvasCtx.stroke();
+
+                        // Текст
+                        canvasCtx.shadowBlur = 0;
+                        canvasCtx.fillStyle = '#ff0000';
+                        canvasCtx.font = "bold 20px 'Courier New'";
+                        canvasCtx.textAlign = "center";
+                        canvasCtx.fillText(`~${Math.round(result.age)} YEARS`, cx, cy - r - 15);
+                    }
+                }
                 requestAnimationFrame(loop);
             };
             loop();
-        });
+        }
 
-        // Авторесайз
-        window.addEventListener('resize', () => {
-            faceapi.matchDimensions(canvas, { width: video.clientWidth, height: video.clientHeight });
-        });
+        // Кнопки
+        btnFlip.onclick = () => {
+            currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+            startCamera();
+        };
 
+        btnTorch.onclick = async () => {
+            if (!track) return;
+            isTorchOn = !isTorchOn;
+            await track.applyConstraints({ advanced: [{ torch: isTorchOn }] }).catch(e => log("Ошибка фонаря", 'error'));
+            btnTorch.classList.toggle('active', isTorchOn);
+        };
+
+        zoomSlider.oninput = (e) => {
+            if (track) track.applyConstraints({ advanced: [{ zoom: e.target.value }] });
+        };
+
+        // Старт при загрузке страницы
         window.onload = init;
+
     </script>
 </body>
 </html>
