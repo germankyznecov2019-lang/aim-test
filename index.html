@@ -3,311 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>Animal CV Recorder</title>
+    <title>Eye Gaze Tracker</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; height: 100vh; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; }
+        body { background: #000; height: 100vh; overflow: hidden; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; }
         
-        /* Основной контейнер */
         .camera-view { position: relative; width: 100%; height: 100%; }
         
-        /* Видео скрыто, мы рисуем его на канвас */
-        #video-source { display: none; }
-        
-        /* Канвас - наш главный экран */
-        #output-canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-        /* Верхняя панель статуса */
-        .status-bar {
-            position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 20px; border-radius: 30px;
-            background: rgba(0, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 255, 255, 0.1); z-index: 10;
+        video {
+            position: absolute; width: 100%; height: 100%; object-fit: cover;
+            transform: scaleX(-1); /* Зеркалим для селфи */
         }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff3333; box-shadow: 0 0 10px #ff3333; transition: 0.3s; }
-        .status-dot.ready { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
-        .status-text { color: rgba(255,255,255,0.9); font-size: 14px; letter-spacing: 1px; font-weight: 500; }
+        
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
-        /* Индикатор записи */
-        .recording-indicator {
-            position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
-            display: flex; align-items: center; gap: 8px;
+        /* Стеклянный интерфейс */
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 40px 20px;
+        }
+
+        .status-badge {
+            align-self: center;
+            background: rgba(20, 0, 0, 0.6);
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            color: #ff4444;
             padding: 8px 16px; border-radius: 20px;
-            background: rgba(255, 0, 0, 0.7); backdrop-filter: blur(5px);
-            color: white; font-size: 14px; font-weight: bold;
-            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9;
-        }
-        .rec-dot { width: 10px; height: 10px; background: white; border-radius: 50%; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.4; } }
-
-        /* Нижняя панель управления */
-        .controls-panel {
-            position: absolute; bottom: 40px; left: 0; width: 100%;
-            display: flex; justify-content: center; align-items: center; gap: 30px;
-            z-index: 20;
+            font-weight: bold; font-size: 14px;
+            backdrop-filter: blur(10px);
+            display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.2);
         }
         
-        /* Кнопки */
+        .status-dot { width: 8px; height: 8px; background: #ff4444; border-radius: 50%; box-shadow: 0 0 10px #ff0000; }
+
+        .controls {
+            pointer-events: auto;
+            display: flex; justify-content: center; gap: 30px; margin-bottom: 20px;
+        }
+
         .btn {
             width: 70px; height: 70px; border-radius: 50%; border: none;
-            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; transition: 0.2s; outline: none; color: white; font-size: 24px;
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white; font-size: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.2s;
         }
-        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.25); }
         
-        .btn-video.recording {
-            border-color: #ff3333; background: rgba(255, 51, 51, 0.2); color: #ff3333;
+        .btn-rec.recording {
+            background: rgba(255, 0, 0, 0.3); border-color: red; color: red;
+            animation: pulse 1.5s infinite;
         }
-        .btn-video.recording svg { fill: #ff3333; }
+        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(255,0,0,0.4);} 70% {box-shadow: 0 0 0 15px rgba(255,0,0,0);} 100% {box-shadow: 0 0 0 0 rgba(255,0,0,0);} }
+
+        #loader {
+            position: absolute; z-index: 99; background: #000; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center; color: white; flex-direction: column; gap: 15px;
+        }
     </style>
 </head>
 <body>
 
+    <div id="loader">
+        <div style="width: 30px; height: 30px; border: 3px solid #333; border-top: 3px solid red; border-radius: 50%; animation: spin 1s infinite linear;"></div>
+        <span>Загрузка ИИ...</span>
+    </div>
+
     <div class="camera-view">
-        <video id="video-source" autoplay muted playsinline></video>
-        <canvas id="output-canvas"></canvas>
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
         
-        <div class="status-bar">
-            <div class="status-dot" id="status-dot"></div>
-            <span class="status-text" id="status-text">INITIALIZING...</span>
-        </div>
-
-        <div class="recording-indicator" id="rec-indicator">
-            <div class="rec-dot"></div> REC <span id="rec-timer">00:00</span>
-        </div>
-
-        <div class="controls-panel">
-            <button class="btn btn-photo" id="photo-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" height="32" viewBox="0 96 960 960" width="32" fill="currentColor"><path d="M160 936q-33 0-56.5-23.5T80 856V376q0-33 23.5-56.5T160 296h126l46-60h296l46 60h126q33 0 56.5 23.5T880 376v480q0 33-23.5 56.5T800 936H160Zm320-160q66 0 113-47t47-113q0-66-47-113t-113-47q-66 0-113 47t-47 113q0 66 47 113t113 47ZM160 376v480h640V376H160Zm0 0v480-480Zm320 192q-33 0-56.5-23.5T400 616q0-33 23.5-56.5T480 536q33 0 56.5 23.5T560 616q0 33-23.5 56.5T480 568Z"/></svg>
-            </button>
-            <button class="btn btn-video" id="video-btn">
-                <svg id="video-icon" xmlns="http://www.w3.org/2000/svg" height="36" viewBox="0 96 960 960" width="36" fill="currentColor"><path d="M160 856q-33 0-56.5-23.5T80 776V376q0-33 23.5-56.5T160 296h640q33 0 56.5 23.5T880 376v400q0 33-23.5 56.5T800 856H160Zm0-80h640V376H160v400Zm320-200Z"/></svg>
-            </button>
+        <div class="ui-layer">
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                <span id="status-text">SYSTEM INIT</span>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" id="btn-photo">📷</button>
+                <button class="btn btn-rec" id="btn-video">⭕</button>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
     <script>
-        const video = document.getElementById('video-source');
-        const canvas = document.getElementById('output-canvas');
-        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
         const statusText = document.getElementById('status-text');
-        const statusDot = document.getElementById('status-dot');
-        const photoBtn = document.getElementById('photo-btn');
-        const videoBtn = document.getElementById('video-btn');
-        const recIndicator = document.getElementById('rec-indicator');
-        const recTimerStr = document.getElementById('rec-timer');
-        const videoIcon = document.getElementById('video-icon');
+        const loader = document.getElementById('loader');
+        
+        // Ссылка на модели
+        const MODELS_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
 
-        let model = null;
-        let isRecording = false;
-        let mediaRecorder = null;
+        let isModelLoaded = false;
+        
+        // Переменные для записи
+        let mediaRecorder;
         let recordedChunks = [];
-        let recordStartTime;
-        let timerInterval;
+        let isRecording = false;
 
-        // Целевые животные
-        const TARGETS = ['cat', 'mouse', 'rabbit', 'dog']; 
-        // Цвета для разных животных
-        const COLORS = {
-            'cat': '#00ffcc',   // Бирюзовый
-            'dog': '#ffaa00',   // Оранжевый
-            'mouse': '#ff55ff', // Розовый
-            'rabbit': '#aaaaaa' // Белый
-        };
-
-        // 1. Инициализация
-        async function init() {
+        // 1. Загрузка моделей (Детектор лиц + Точки лица)
+        async function loadModels() {
             try {
-                statusText.innerText = "LOADING BRAIN...";
-                // Загружаем модель. Используем lite версию для скорости на телефоне
-                model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
-                
-                statusText.innerText = "STARTING CAM...";
-                await startCamera();
-                
-                statusText.innerText = "SYSTEM READY";
-                statusDot.classList.add('ready');
-                startDetectionLoop();
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
+                    faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL) // Важно: модель точек лица
+                ]);
+                isModelLoaded = true;
+                startCamera();
             } catch (err) {
-                statusText.innerText = "ERROR: " + err.message;
-                statusDot.style.background = 'red';
-                console.error(err);
+                alert("Ошибка загрузки моделей: " + err);
             }
         }
 
-        // 2. Камера (Максимальное разрешение для дальности)
+        // 2. Камера
         async function startCamera() {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment', // Задняя камера
-                    // Просим 4K, браузер даст максимум возможного
-                    width: { ideal: 4096 },
-                    height: { ideal: 2160 }
-                },
-                audio: false // Звук не пишем для простоты
-            });
-            video.srcObject = stream;
-            // Ждем, пока видео начнет проигрываться и узнаем его реальные размеры
-            return new Promise(resolve => {
-                video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    resolve();
-                };
-            });
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                video.srcObject = stream;
+            } catch (e) {
+                alert("Ошибка камеры. Откройте сайт через HTTPS.");
+            }
         }
 
-        // 3. Главный цикл отрисовки и детекции
-        function startDetectionLoop() {
-            async function frame() {
-                // 1. Рисуем кадр с камеры на канвас
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // 3. Главный цикл
+        video.addEventListener('play', () => {
+            loader.style.display = 'none';
+            statusText.innerText = "SCANNING...";
+            
+            const displaySize = { width: video.clientWidth, height: video.clientHeight };
+            faceapi.matchDimensions(canvas, displaySize);
 
-                // 2. Ищем объекты
-                if (model) {
-                    // scoreThreshold: 0.25 - низкий порог, чтобы видеть далеко и мелко
-                    const predictions = await model.detect(video, undefined, 0.25);
-                    
-                    let found = false;
-                    predictions.forEach(prediction => {
-                        // Фильтруем только нужных животных
-                        if (TARGETS.includes(prediction.class)) {
-                            found = true;
-                            drawMagicalCircle(prediction);
-                        }
-                    });
+            setInterval(async () => {
+                if (!isModelLoaded) return;
 
-                    if(found && !isRecording) statusText.innerText = "TARGET DETECTED";
-                    else if (!isRecording) statusText.innerText = "SCANNING...";
+                // Ищем лица И точки на них
+                const detections = await faceapi.detectAllFaces(
+                    video, 
+                    new faceapi.TinyFaceDetectorOptions()
+                ).withFaceLandmarks(true);
+
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (resizedDetections.length > 0) {
+                    statusText.innerText = "TARGET LOCKED";
+                    statusText.style.color = "#ff4444";
+                } else {
+                    statusText.innerText = "SEARCHING...";
+                    statusText.style.color = "white";
                 }
 
-                requestAnimationFrame(frame);
-            }
-            frame();
-        }
+                resizedDetections.forEach(det => {
+                    // 1. РИСУЕМ БОЛЬШОЙ КРУГ ВОКРУГ ЛИЦА
+                    drawFaceCircle(ctx, det.detection.box);
 
-        // Функция отрисовки круга
-        function drawMagicalCircle(prediction) {
-            const [x, y, width, height] = prediction.bbox;
-            const centerX = x + width / 2;
-            const centerY = y + height / 2;
-            // Радиус чуть больше самого объекта
-            const radius = Math.max(width, height) / 1.6;
-            const color = COLORS[prediction.class] || '#00ffcc';
+                    // 2. ПОЛУЧАЕМ КООРДИНАТЫ ГЛАЗ
+                    const landmarks = det.landmarks;
+                    const leftEye = landmarks.getLeftEye();
+                    const rightEye = landmarks.getRightEye();
+                    const nose = landmarks.getNose();
+
+                    // 3. РИСУЕМ КРАСНУЮ ОБВОДКУ ГЛАЗ
+                    drawEyeOutline(ctx, leftEye);
+                    drawEyeOutline(ctx, rightEye);
+
+                    // 4. РИСУЕМ НАПРАВЛЕНИЕ ВЗГЛЯДА (Лазеры)
+                    // Вычисляем вектор "куда смотрит лицо" на основе носа
+                    // Верх носа - точка 0, Низ носа - точка 4 (в массиве носа)
+                    const noseTop = nose[0];
+                    const noseBottom = nose[3]; // Кончик носа
+
+                    // Вектор направления (от переносицы к кончику)
+                    const gazeVector = {
+                        x: (noseBottom.x - noseTop.x) * 8, // Усиливаем длину
+                        y: (noseBottom.y - noseTop.y) * 8
+                    };
+
+                    drawGaze(ctx, leftEye, gazeVector);
+                    drawGaze(ctx, rightEye, gazeVector);
+                });
+
+            }, 80); // Частота обновления
+        });
+
+        // --- ФУНКЦИИ ОТРИСОВКИ ---
+
+        function drawFaceCircle(ctx, box) {
+            // Зеркалим координаты X, так как видео отзеркалено CSS-ом
+            // Но канвас рисует прямо. Нужно считать X справа.
+            const centerX = canvas.width - (box.x + box.width / 2);
+            const centerY = box.y + box.height / 2;
+            const radius = box.width / 1.6;
 
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            
-            // Основное кольцо
             ctx.lineWidth = 3;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.shadowColor = color;
-            ctx.shadowBlur = 20;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.shadowColor = '#00ffcc';
+            ctx.shadowBlur = 15;
             ctx.stroke();
+        }
 
-            // Тонкое внутреннее кольцо для эффекта
+        function drawEyeOutline(ctx, points) {
             ctx.beginPath();
-            ctx.arc(centerX, centerY, radius * 0.9, 0, 2 * Math.PI);
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = color;
-            ctx.shadowBlur = 0;
+            // Зеркалим каждую точку глаза
+            const firstX = canvas.width - points[0].x;
+            ctx.moveTo(firstX, points[0].y);
+            
+            for (let i = 1; i < points.length; i++) {
+                const x = canvas.width - points[i].x;
+                ctx.lineTo(x, points[i].y);
+            }
+            ctx.closePath();
+            
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ff0000'; // Красный
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 10;
             ctx.stroke();
-
-            // Подпись (опционально, можно убрать)
-            ctx.fillStyle = color;
-            ctx.font = "bold 16px Arial";
-            ctx.shadowBlur = 5;
-            ctx.fillText(`${prediction.class.toUpperCase()} (${Math.round(prediction.score * 100)}%)`, x, y - 10);
         }
 
-        // --- Функционал Кнопок ---
+        function drawGaze(ctx, eyePoints, vector) {
+            // Находим центр глаза
+            let sumX = 0, sumY = 0;
+            eyePoints.forEach(p => { sumX += p.x; sumY += p.y; });
+            
+            const centerX = canvas.width - (sumX / eyePoints.length); // Зеркалим центр
+            const centerY = sumY / eyePoints.length;
 
-        // Фото
-        photoBtn.addEventListener('click', () => {
-            // Вспышка экрана
-            const flash = document.createElement('div');
-            flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;opacity:0.8;z-index:999;transition:opacity 0.5s';
-            document.body.appendChild(flash);
-            setTimeout(() => flash.style.opacity = '0', 50);
-            setTimeout(() => flash.remove(), 550);
+            // Рисуем линию взгляда
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            // Линия идет ОТ центра ПЛЮС вектор
+            // Важно: vector.x нужно вычитать, т.к. мы в зеркальном режиме
+            ctx.lineTo(centerX - vector.x, centerY + vector.y);
+            
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255, 50, 50, 0.6)'; // Полупрозрачный луч
+            ctx.stroke();
+            
+            // Точка в центре глаза
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 3, 0, Math.PI*2);
+            ctx.fillStyle = 'red';
+            ctx.fill();
+        }
+        
+        // --- ЗАПИСЬ И ФОТО ---
 
-            // Сохранение канваса
+        document.getElementById('btn-photo').onclick = () => {
             const link = document.createElement('a');
-            link.download = `animal-detect-${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.download = 'cyber-face.png';
+            link.href = canvas.toDataURL();
             link.click();
-        });
+        };
 
-        // Видео
-        videoBtn.addEventListener('click', toggleRecording);
+        const btnVideo = document.getElementById('btn-video');
+        btnVideo.onclick = () => {
+            if (isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                btnVideo.classList.remove('recording');
+            } else {
+                const stream = canvas.captureStream(30);
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                recordedChunks = [];
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'cyber-video.webm'; a.click();
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                btnVideo.classList.add('recording');
+            }
+        };
+        
+        // Стили анимации загрузки
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
+        document.head.appendChild(style);
 
-        function toggleRecording() {
-            if (!isRecording) { startRecording(); } else { stopRecording(); }
-        }
+        // Старт при загрузке
+        window.onload = () => {
+            if(typeof faceapi !== 'undefined') loadModels();
+            else alert("Ошибка библиотеки face-api");
+        };
 
-        function startRecording() {
-            // Записываем поток С КАНВАСА (чтобы были видны круги)
-            const stream = canvas.captureStream(30); // 30 FPS
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-            recordedChunks = [];
-
-            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-            
-            mediaRecorder.onstop = saveVideo;
-
-            mediaRecorder.start();
-            isRecording = true;
-            
-            // Обновляем интерфейс
-            videoBtn.classList.add('recording');
-            // Меняем иконку на квадрат (стоп)
-            videoIcon.innerHTML = '<path d="M320 680h320V280H320v400Z"/>';
-            recIndicator.style.opacity = '1';
-            statusText.innerText = "RECORDING...";
-            
-            // Таймер
-            recordStartTime = Date.now();
-            timerInterval = setInterval(updateTimer, 1000);
-        }
-
-        function stopRecording() {
-            mediaRecorder.stop();
-            isRecording = false;
-            
-            // Обновляем интерфейс обратно
-            videoBtn.classList.remove('recording');
-            videoIcon.innerHTML = '<path d="M160 856q-33 0-56.5-23.5T80 776V376q0-33 23.5-56.5T160 296h640q33 0 56.5 23.5T880 376v400q0 33-23.5 56.5T800 856H160Zm0-80h640V376H160v400Zm320-200Z"/>';
-            recIndicator.style.opacity = '0';
-            statusText.innerText = "SYSTEM READY";
-            clearInterval(timerInterval);
-            recTimerStr.innerText = "00:00";
-        }
-
-        function saveVideo() {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `animal-video-${Date.now()}.webm`;
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function updateTimer() {
-            const diff = Math.floor((Date.now() - recordStartTime) / 1000);
-            const mins = Math.floor(diff / 60).toString().padStart(2, '0');
-            const secs = (diff % 60).toString().padStart(2, '0');
-            recTimerStr.innerText = `${mins}:${secs}`;
-        }
-
-        // Запуск при загрузке
-        window.addEventListener('load', init);
     </script>
 </body>
 </html>
