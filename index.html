@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Glass Face AR</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Зеркалим видео как в селфи-камере */
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Стеклянная панель (Glassmorphism) */
+        .glass-ui {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            padding: 18px 24px;
+            
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            font-size: 16px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            
+            /* Анимация появления */
+            opacity: 0;
+            animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.5s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translate(-50%, 40px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+
+        /* Загрузчик */
+        .loader-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99;
+            transition: opacity 0.5s;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: #00ffcc;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        
+        .loader-text {
+            color: #888;
+            font-size: 14px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="loader-container" id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text" id="loader-text">Загрузка нейросетей (это может занять время)...</div>
+    </div>
+
+    <div class="camera-container">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
+        
+        <div class="glass-ui" id="status-panel">
+            <span id="status-text">Инициализация...</span>
+        </div>
+    </div>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const statusText = document.getElementById('status-text');
+        const loader = document.getElementById('loader');
+        const loaderText = document.getElementById('loader-text');
+
+        // Ссылка на модели в интернете
+        const MODELS_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+
+        // 1. Загрузка моделей из интернета
+        async function loadModels() {
+            try {
+                loaderText.innerText = "Загрузка моделей...";
+                
+                // Загружаем только детектор (он легкий)
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL);
+                
+                loaderText.innerText = "Запуск камеры...";
+                startCamera();
+            } catch (err) {
+                showError("Ошибка загрузки моделей. Проверь интернет.");
+                console.error(err);
+            }
+        }
+
+        // 2. Запуск камеры
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user', // Фронтальная камера
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                showError("Ошибка доступа к камере! Проверьте разрешения или откройте через HTTPS.");
+                console.error(err);
+            }
+        }
+
+        function showError(msg) {
+            loader.style.background = "#220000";
+            loaderText.style.color = "#ff5555";
+            loaderText.innerText = msg;
+        }
+
+        // 3. Отрисовка и детектор
+        video.addEventListener('play', () => {
+            // Скрываем загрузчик
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 500);
+
+            const displaySize = { width: video.clientWidth, height: video.clientHeight };
+            faceapi.matchDimensions(canvas, displaySize);
+
+            setInterval(async () => {
+                // Параметры детекции (чем меньше scoreThreshold, тем легче находит лицо)
+                const detections = await faceapi.detectAllFaces(
+                    video, 
+                    new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 })
+                );
+
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (resizedDetections.length > 0) {
+                    statusText.innerText = "Лицо найдено";
+                    statusText.style.color = "#00ffcc";
+                    statusText.style.textShadow = "0 0 10px rgba(0, 255, 204, 0.5)";
+                } else {
+                    statusText.innerText = "Поиск лица...";
+                    statusText.style.color = "rgba(255,255,255,0.9)";
+                    statusText.style.textShadow = "none";
+                }
+
+                // Рисуем магический круг
+                resizedDetections.forEach(detection => {
+                    const box = detection.box;
+                    const centerX = video.videoWidth - (box.x + box.width / 2); // Зеркалим X
+                    // Примечание: face-api координаты иногда нужно зеркалить вручную если video css scaleX(-1)
+                    // Но для простоты рисуем по "экранным" координатам
+                    
+                    // Рисуем прямо по боксу, но делаем красивый овал
+                    const x = box.x + box.width / 2;
+                    const y = box.y + box.height / 2;
+                    const r = box.width / 1.6;
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, r, 0, 2 * Math.PI);
+                    
+                    // Неоновая обводка
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+                    ctx.shadowColor = '#00ffcc';
+                    ctx.shadowBlur = 25;
+                    ctx.stroke();
+                });
+            }, 100);
+        });
+        
+        // Старт
+        window.onload = () => {
+            if(typeof faceapi !== 'undefined') loadModels();
+            else showError("Не удалось загрузить библиотеку face-api");
+        };
+
+        // Адаптация при повороте экрана
+        window.addEventListener('resize', () => {
+             const displaySize = { width: video.clientWidth, height: video.clientHeight };
+             faceapi.matchDimensions(canvas, displaySize);
+        });
+
+    </script>
+</body>
+</html>
