@@ -2,180 +2,168 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AI HUD Debug</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Мобильный Face Tracker</title>
+
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
-        .container { position: relative; width: 100vw; height: 100vh; }
-        .input_video { display: none; }
-        .output_canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
-        
-        /* HUD Layer */
-        .hud-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
-        
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 10px;
-            color: white;
-            text-align: center;
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #000;
+            color: #fff;
+            font-family: sans-serif;
+            overflow: hidden; /* Предотвращаем прокрутку */
         }
 
-        #loader {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #0a0a0a; z-index: 20;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            color: #0f0; padding: 20px; text-align: center;
+        h1 {
+            margin: 10px;
+            font-size: 1.2em;
         }
-        
-        #error-log { color: #ff3333; margin-top: 20px; font-size: 12px; max-width: 80%; word-wrap: break-word; }
-        
-        .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid rgba(0, 255, 0, 0.3);
-            border-top: 4px solid #0f0; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
+
+        .video-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh; /* Попытка занять весь экран */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #video {
+            /* Заполнение всего контейнера, но сохранение пропорций */
+            min-width: 100%; 
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            /* Зеркальное отображение для фронтальной камеры */
+            transform: scaleX(-1); 
+            object-fit: cover; /* Важно для мобильных */
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            /* Применяем то же зеркальное отображение */
+            transform: scaleX(-1); 
+        }
+
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            z-index: 20;
+        }
     </style>
 </head>
 <body>
 
-    <div id="loader">
-        <div class="spinner"></div>
-        <div id="status-text">LOADING AI CORE...</div>
-        <div id="error-log"></div>
+    <div class="video-container">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+        <div id="loading-message" class="message">Загрузка модели...</div>
     </div>
 
-    <div class="container">
-        <video class="input_video" playsinline muted autoplay></video>
-        <canvas class="output_canvas"></canvas>
-        
-        <div class="hud-layer">
-            <div class="glass-panel" style="align-self: flex-start;">
-                TARGET LOCKED: <span id="conf-score">--</span>
-            </div>
-            <div class="glass-panel" style="align-self: center; margin-bottom: 20px;">
-                FPS: <span id="fps-counter">0</span>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@1.2.2/dist/face-api.min.js"></script>
 
     <script>
-        // --- СИСТЕМА ОТЛОВКИ ОШИБОК ---
-        function logError(msg) {
-            document.getElementById('error-log').innerText = "ERR: " + msg;
-            document.getElementById('status-text').innerText = "SYSTEM FAILURE";
-            document.querySelector('.spinner').style.borderColor = 'red';
-        }
-        window.onerror = function (msg, url, lineNo, columnNo, error) {
-            logError(msg + " line: " + lineNo);
-            return false;
-        };
-        // ------------------------------
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('overlay');
+        const loadingMessage = document.getElementById('loading-message');
 
-        const videoElement = document.getElementsByClassName('input_video')[0];
-        const canvasElement = document.getElementsByClassName('output_canvas')[0];
-        const canvasCtx = canvasElement.getContext('2d');
-        const loader = document.getElementById('loader');
-        
-        let lastTime = 0;
-        // Переменные анимации
-        let currX=0, currY=0, currR=0, targetX=0, targetY=0, targetR=0;
+        // Модели загружаются прямо из CDN для упрощения (в отличие от локальных файлов)
+        const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/';
 
-        function onResults(results) {
-            // Успешный запуск - скрываем лоадер
-            if (loader.style.display !== 'none') loader.style.display = 'none';
-
-            canvasElement.width = window.innerWidth;
-            canvasElement.height = window.innerHeight;
-            
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            // Отражаем и рисуем
-            canvasCtx.translate(canvasElement.width, 0);
-            canvasCtx.scale(-1, 1);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-            if (results.detections.length > 0) {
-                const det = results.detections[0];
-                const box = det.boundingBox;
-                
-                // Координаты (упрощенные для полного экрана)
-                targetX = box.xCenter * canvasElement.width;
-                targetY = box.yCenter * canvasElement.height;
-                targetR = (box.width * canvasElement.width) / 1.5;
-                
-                document.getElementById('conf-score').innerText = Math.round(det.categories[0].score * 100) + "%";
-            } else {
-                targetR = 0; // Если лицо пропало, радиус в 0
+        // Загрузка моделей (Tiny Face Detector для скорости)
+        async function loadModels() {
+            try {
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                loadingMessage.innerText = 'Модель загружена. Запуск камеры...';
+                startVideo();
+            } catch (error) {
+                console.error("Ошибка при загрузке модели:", error);
+                loadingMessage.innerText = 'Ошибка загрузки модели. Проверьте консоль.';
             }
-
-            // Плавность (Lerp)
-            currX += (targetX - currX) * 0.2;
-            currY += (targetY - currY) * 0.2;
-            currR += (targetR - currR) * 0.2;
-
-            // Рисуем круг
-            if (currR > 1) {
-                canvasCtx.beginPath();
-                canvasCtx.arc(currX, currY, currR, 0, 2 * Math.PI);
-                canvasCtx.lineWidth = 3;
-                canvasCtx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-                canvasCtx.shadowBlur = 20;
-                canvasCtx.shadowColor = "white";
-                canvasCtx.stroke();
-            }
-            
-            canvasCtx.restore();
-
-            // FPS
-            const now = performance.now();
-            if (now - lastTime >= 1000) {
-                 // Упрощенный FPS
-            }
-            document.getElementById('fps-counter').innerText = Math.round(1000 / (now - lastTime));
-            lastTime = now;
         }
 
-        try {
-            const faceDetection = new FaceDetection({locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
-            }});
-
-            faceDetection.setOptions({
-                modelSelection: 0, // 0 - легче и быстрее (Short Range), лучше для селфи
-                minDetectionConfidence: 0.5
+        // Доступ к камере
+        function startVideo() {
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: "user" // Фронтальная камера
+                }
+            })
+            .then(stream => {
+                video.srcObject = stream;
+                // Скрываем сообщение, когда видео начнет воспроизводиться
+                video.addEventListener('loadeddata', () => {
+                    loadingMessage.style.display = 'none';
+                });
+            })
+            .catch(err => {
+                console.error("Ошибка доступа к камере: ", err);
+                loadingMessage.innerText = 'Не удалось получить доступ к камере. Требуется HTTPS.';
             });
-            
-            faceDetection.onResults(onResults);
-
-            const camera = new Camera(videoElement, {
-                onFrame: async () => {
-                    await faceDetection.send({image: videoElement});
-                },
-                width: 640, // Снизил разрешение для скорости загрузки
-                height: 480,
-                facingMode: "user"
-            });
-
-            camera.start()
-                .then(() => console.log("Camera started"))
-                .catch(e => logError("Camera Access Denied: " + e.message));
-
-        } catch (e) {
-            logError("Init Error: " + e.message);
         }
+
+        // Запуск обнаружения лиц
+        async function startDetection() {
+            // Установка размеров Canvas в соответствии с видео
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const displaySize = { width: video.videoWidth, height: video.videoHeight };
+            faceapi.matchDimensions(canvas, displaySize);
+            
+            // Интервал для 60 FPS (1000мс / 60 ≈ 16.6мс)
+            setInterval(async () => {
+                const detections = await faceapi.detectAllFaces(
+                    video, 
+                    new faceapi.TinyFaceDetectorOptions({
+                        inputSize: 224, // Хороший баланс скорости/точности для мобильных
+                        scoreThreshold: 0.5 
+                    })
+                );
+
+                // Изменение размеров для отрисовки
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+                // Очистка canvas
+                const context = canvas.getContext('2d');
+                context.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Рисование красных кругов
+                resizedDetections.forEach(detection => {
+                    const box = detection.box;
+                    const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+                    // Выбираем больший размер для радиуса, чтобы круг полностью вместил лицо
+                    const radius = Math.max(box.width, box.height) * 0.6; 
+
+                    context.beginPath();
+                    context.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+                    context.strokeStyle = 'red';
+                    context.lineWidth = 4;
+                    context.stroke();
+                });
+                
+            }, 16); // 16 миллисекунд для ≈60 FPS
+        }
+
+        // Основной запуск
+        loadModels();
+        video.addEventListener('play', startDetection);
+
     </script>
 </body>
 </html>
