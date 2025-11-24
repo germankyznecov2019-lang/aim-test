@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мобильный Face Tracker</title>
+    <title>Мобильный Face Tracker (Исправлено)</title>
 
     <style>
         body {
@@ -17,7 +17,7 @@
             background-color: #000;
             color: #fff;
             font-family: sans-serif;
-            overflow: hidden; /* Предотвращаем прокрутку */
+            overflow: hidden;
         }
 
         h1 {
@@ -28,7 +28,7 @@
         .video-container {
             position: relative;
             width: 100vw;
-            height: 100vh; /* Попытка занять весь экран */
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -36,14 +36,12 @@
         }
 
         #video {
-            /* Заполнение всего контейнера, но сохранение пропорций */
             min-width: 100%; 
             min-height: 100%;
             width: auto;
             height: auto;
-            /* Зеркальное отображение для фронтальной камеры */
             transform: scaleX(-1); 
-            object-fit: cover; /* Важно для мобильных */
+            object-fit: cover;
         }
 
         #overlay {
@@ -51,7 +49,6 @@
             top: 0;
             left: 0;
             z-index: 10;
-            /* Применяем то же зеркальное отображение */
             transform: scaleX(-1); 
         }
 
@@ -64,6 +61,7 @@
             background-color: rgba(0, 0, 0, 0.7);
             border-radius: 5px;
             z-index: 20;
+            text-align: center;
         }
     </style>
 </head>
@@ -82,64 +80,57 @@
         const canvas = document.getElementById('overlay');
         const loadingMessage = document.getElementById('loading-message');
 
-        // Модели загружаются прямо из CDN для упрощения (в отличие от локальных файлов)
-        const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/';
+        // ⭐ ИСПРАВЛЕННЫЙ ПУТЬ К МОДЕЛЯМ, который работает с CDN.
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@1.2.2/weights/'; 
 
-        // Загрузка моделей (Tiny Face Detector для скорости)
         async function loadModels() {
             try {
+                // Используем TinyFaceDetector для лучшей скорости на мобильных
                 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
                 loadingMessage.innerText = 'Модель загружена. Запуск камеры...';
                 startVideo();
             } catch (error) {
                 console.error("Ошибка при загрузке модели:", error);
-                loadingMessage.innerText = 'Ошибка загрузки модели. Проверьте консоль.';
+                loadingMessage.innerText = 'Ошибка загрузки модели. Убедитесь, что вы используете HTTPS.';
             }
         }
 
-        // Доступ к камере
         function startVideo() {
             navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: "user" // Фронтальная камера
+                    facingMode: "user" 
                 }
             })
             .then(stream => {
                 video.srcObject = stream;
-                // Скрываем сообщение, когда видео начнет воспроизводиться
                 video.addEventListener('loadeddata', () => {
                     loadingMessage.style.display = 'none';
                 });
             })
             .catch(err => {
                 console.error("Ошибка доступа к камере: ", err);
-                loadingMessage.innerText = 'Не удалось получить доступ к камере. Требуется HTTPS.';
+                loadingMessage.innerText = 'Не удалось получить доступ к камере. Требуется разрешение и HTTPS.';
             });
         }
 
-        // Запуск обнаружения лиц
         async function startDetection() {
-            // Установка размеров Canvas в соответствии с видео
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
             const displaySize = { width: video.videoWidth, height: video.videoHeight };
             faceapi.matchDimensions(canvas, displaySize);
             
-            // Интервал для 60 FPS (1000мс / 60 ≈ 16.6мс)
+            // Интервал для ~60 FPS
             setInterval(async () => {
                 const detections = await faceapi.detectAllFaces(
                     video, 
                     new faceapi.TinyFaceDetectorOptions({
-                        inputSize: 224, // Хороший баланс скорости/точности для мобильных
+                        inputSize: 224, 
                         scoreThreshold: 0.5 
                     })
                 );
 
-                // Изменение размеров для отрисовки
                 const resizedDetections = faceapi.resizeResults(detections, displaySize);
-
-                // Очистка canvas
                 const context = canvas.getContext('2d');
                 context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -147,7 +138,6 @@
                 resizedDetections.forEach(detection => {
                     const box = detection.box;
                     const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-                    // Выбираем больший размер для радиуса, чтобы круг полностью вместил лицо
                     const radius = Math.max(box.width, box.height) * 0.6; 
 
                     context.beginPath();
@@ -157,7 +147,7 @@
                     context.stroke();
                 });
                 
-            }, 16); // 16 миллисекунд для ≈60 FPS
+            }, 16); // 16 миллисекунд
         }
 
         // Основной запуск
@@ -167,3 +157,4 @@
     </script>
 </body>
 </html>
+ 
