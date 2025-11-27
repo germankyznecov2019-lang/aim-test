@@ -16,7 +16,7 @@
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // Включаем логирование для отладки
+        // Включаем логирование для отладки (в продакшене лучше отключить)
         setLogLevel('debug');
 
         // Глобальные переменные Firebase
@@ -37,25 +37,35 @@
                 window.firebase.auth = getAuth(app);
                 
                 // Аутентификация
+                const auth = window.firebase.auth;
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(window.firebase.auth, __initial_auth_token);
+                    await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    await signInAnonymously(window.firebase.auth);
+                    await signInAnonymously(auth);
                 }
 
                 // Установка слушателя и получение userId
-                onAuthStateChanged(window.firebase.auth, (user) => {
+                onAuthStateChanged(auth, (user) => {
                     if (user) {
                         window.firebase.userId = user.uid;
                         window.firebase.userIsReady = true;
                         if (window.onFirebaseReady) {
                             window.onFirebaseReady();
                         }
+                    } else if (!window.firebase.userIsReady) {
+                         // В случае выхода или ошибки (если не было готово), используем анонимный вход
+                         signInAnonymously(auth).then(result => {
+                             window.firebase.userId = result.user.uid;
+                             window.firebase.userIsReady = true;
+                             if (window.onFirebaseReady) {
+                                window.onFirebaseReady();
+                             }
+                         });
                     }
                 });
 
             } catch (error) {
-                console.error("FIREBASE ERROR:", error);
+                console.error("FIREBASE FATAL ERROR (using local mode):", error);
                 // В случае фатальной ошибки, запускаем игру в локальном режиме
                 setTimeout(() => {
                     window.firebase = { userId: 'local-test-user', userIsReady: true, appId: 'local', db: null, auth: null };
@@ -78,7 +88,47 @@
             color: #e5e7eb; /* Светлый текст */
             min-height: 100vh;
             transition: background 0.3s;
+            /* Скрываем скролл, если TWA не справляется */
+            overflow-x: hidden; 
         }
+
+        /* Loading Overlay Style */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0b0f19;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Spinner style (simple animation) */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #0098EA;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
 
         .glass-card {
             background: rgba(255, 255, 255, 0.08); /* Светлая прозрачность */
@@ -105,10 +155,11 @@
         /* Стили для кнопок (iOS-подобная анимация) */
         .glass-button {
             border-radius: 12px;
-            padding: 12px 24px;
+            padding: 14px 24px; /* Увеличенные тач-зоны */
             font-weight: 600;
             transition: transform 0.15s, box-shadow 0.15s, opacity 0.3s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-height: 48px; /* Гарантированный размер тач-зоны */
         }
 
         .glass-button:active {
@@ -127,6 +178,7 @@
             transition: all 0.2s;
             border-bottom: 3px solid transparent;
             color: #9ca3af;
+            padding: 16px 12px; /* Увеличенный вертикальный паддинг для тач-зоны */
         }
         .tab-button.active {
             border-bottom: 3px solid #0098EA;
@@ -139,6 +191,7 @@
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.15);
             transition: border-color 0.3s;
+            min-height: 48px; /* Гарантированный размер тач-зоны */
         }
         .glass-input:focus {
             outline: none;
@@ -147,14 +200,27 @@
 
         /* Стиль для плавающего меню */
         .sticky-tabs {
-             background: rgba(11, 15, 25, 0.7); /* Более темный прозрачный фон для лучшего контраста */
+             background: rgba(11, 15, 25, 0.85); /* Более темный прозрачный фон для лучшего контраста */
              backdrop-filter: blur(8px);
              -webkit-backdrop-filter: blur(8px);
+             /* Мобильная прокрутка для большого количества вкладок */
+             white-space: nowrap; 
+             overflow-x: auto;
+             -webkit-overflow-scrolling: touch;
+        }
+        .sticky-tabs::-webkit-scrollbar {
+             display: none; /* Скрываем скроллбар на Android */
         }
 
     </style>
 </head>
 <body class="pb-20">
+
+<!-- ЭКРАН ЗАГРУЗКИ -->
+<div id="loading-overlay">
+    <div class="spinner mb-4"></div>
+    <p class="text-xl text-white ton-glow font-bold">Загрузка CryptoTycoon...</p>
+</div>
 
 <div id="app-container" class="max-w-xl mx-auto w-full p-4">
 
@@ -163,18 +229,18 @@
         <h1 class="text-3xl font-bold text-white ton-glow">CryptoTycoon TON</h1>
         <p class="text-sm mt-1 text-gray-400 opacity-80">ID: <span id="profile-id" class="text-xs font-mono">...</span></p>
         
-        <div class="mt-4 flex flex-col md:flex-row gap-2">
-            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10">
-                <span class="text-xs text-gray-400 block">Внутриигровой курс:</span>
+        <div class="mt-4 flex flex-col sm:flex-row gap-3">
+            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10 min-w-0">
+                <span class="text-xs text-gray-400 block">Курс:</span>
                 <p class="text-xl font-bold text-yellow-300">$<span id="display-ton-price">15.00</span> / TON</p>
             </div>
             
-            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10">
+            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10 min-w-0">
                 <span class="text-xs text-gray-400">USD Баланс:</span>
                 <p class="text-xl font-bold text-green-300">$<span id="display-usd">0.00</span></p>
             </div>
             
-            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10">
+            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10 min-w-0">
                 <span class="text-xs text-gray-400">TON Баланс:</span>
                 <p class="text-xl font-bold text-white ton-glow"><span id="display-ton">0.0000</span> 💎</p>
             </div>
@@ -182,12 +248,12 @@
     </header>
 
     <!-- Навигация по вкладкам (Стеклянная, прилипающая) -->
-    <div class="flex border-b border-white/10 mb-6 sticky top-0 z-10 overflow-x-auto sticky-tabs rounded-b-xl">
-        <button id="tab-farm" onclick="changeTab('farm')" class="tab-button flex-shrink-0 p-3 text-center active">⛏ Ферма</button>
-        <button id="tab-shop" onclick="changeTab('shop')" class="tab-button flex-shrink-0 p-3 text-center">🖥 Магазин</button>
-        <button id="tab-bank" onclick="changeTab('bank')" class="tab-button flex-shrink-0 p-3 text-center">🏦 Банк</button>
-        <button id="tab-wallet" onclick="changeTab('wallet')" class="tab-button flex-shrink-0 p-3 text-center">👛 Кошелек</button>
-        <button id="tab-nft" onclick="changeTab('nft')" class="tab-button flex-shrink-0 p-3 text-center">🖼 NFT</button>
+    <div class="flex border-b border-white/10 mb-6 sticky top-0 z-10 sticky-tabs rounded-b-xl">
+        <button id="tab-farm" onclick="changeTab('farm')" class="tab-button flex-shrink-0 text-center active">⛏ Ферма</button>
+        <button id="tab-shop" onclick="changeTab('shop')" class="tab-button flex-shrink-0 text-center">🖥 Магазин</button>
+        <button id="tab-bank" onclick="changeTab('bank')" class="tab-button flex-shrink-0 text-center">🏦 Банк</button>
+        <button id="tab-wallet" onclick="changeTab('wallet')" class="tab-button flex-shrink-0 text-center">👛 Кошелек</button>
+        <button id="tab-nft" onclick="changeTab('nft')" class="tab-button flex-shrink-0 text-center">🖼 NFT</button>
     </div>
 
     <!-- КОНТЕНТ ВКЛАДОК -->
@@ -200,8 +266,8 @@
                 <span id="passive-rate" class="text-base text-gray-400">0.00 TON/мин</span>
             </h2>
             
-            <div class="flex justify-between items-center mb-4 p-4 glass-card !shadow-none !bg-white/5 border-white/10">
-                <span class="text-lg">Накоплено:</span>
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 p-4 glass-card !shadow-none !bg-white/5 border-white/10">
+                <span class="text-lg mb-2 sm:mb-0">Накоплено:</span>
                 <span id="pending-ton" class="text-2xl font-bold text-yellow-400 ton-glow">0.0000 TON</span>
             </div>
 
@@ -216,7 +282,7 @@
         <section class="mt-8 p-4 glass-card">
             <h2 class="text-2xl font-semibold mb-4 text-blue-300">💱 Обмен TON</h2>
             <div class="bg-white/5 p-4 rounded-xl border border-white/10">
-                <p class="text-sm text-gray-400 mb-2">Обмен всего TON на USD по текущему курсу: $<span id="current-exchange-rate">15.00</span></p>
+                <p class="text-sm text-gray-400 mb-3">Обмен всего TON на USD по текущему курсу: $<span id="current-exchange-rate">15.00</span></p>
                 <button onclick="exchangeTonToUsd()" class="w-full glass-button bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-30" id="exchange-button">
                     Обменять Весь TON
                 </button>
@@ -230,7 +296,7 @@
         <div id="shop-feedback" class="mb-4 p-3 rounded-xl hidden text-center font-mono"></div>
         
         <!-- Контейнер для динамического рендеринга 30 GPU -->
-        <div id="gpu-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="gpu-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <!-- Здесь будут сгенерированы 30 карточек GPU -->
         </div>
 
@@ -264,17 +330,17 @@
             <p class="text-sm text-gray-400">Общая Ставка: <span id="bank-interest-rate" class="text-cyan-400 font-bold">5.00%</span> в час</p>
             <p class="text-sm text-gray-400 mb-3">Накопленные %: +<span id="bank-accumulated-interest" class="text-green-400 font-mono">0.0000</span> $</p>
             
-            <div class="grid grid-cols-2 gap-2 mt-4">
-                <button onclick="bankDeposit(100)" id="deposit-100-btn" class="glass-button bg-green-700/80 hover:bg-green-700 text-white text-sm disabled:opacity-30">
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <button onclick="bankDeposit(100)" id="deposit-100-btn" class="glass-button bg-green-700/80 hover:bg-green-700 text-white text-sm disabled:opacity-30 !py-3">
                     Внести 100 $
                 </button>
-                <button onclick="bankWithdraw(100)" id="withdraw-100-btn" class="glass-button bg-red-700/80 hover:bg-red-700 text-white text-sm disabled:opacity-30">
+                <button onclick="bankWithdraw(100)" id="withdraw-100-btn" class="glass-button bg-red-700/80 hover:bg-red-700 text-white text-sm disabled:opacity-30 !py-3">
                     Снять 100 $
                 </button>
-                <button onclick="bankDeposit('all')" id="deposit-all-btn" class="glass-button bg-green-900/80 hover:bg-green-900 text-white text-sm disabled:opacity-30">
+                <button onclick="bankDeposit('all')" id="deposit-all-btn" class="glass-button bg-green-900/80 hover:bg-green-900 text-white text-sm disabled:opacity-30 !py-3">
                     Внести Все
                 </button>
-                <button onclick="bankWithdraw('all')" id="withdraw-all-btn" class="glass-button bg-red-900/80 hover:bg-red-900 text-white text-sm disabled:opacity-30">
+                <button onclick="bankWithdraw('all')" id="withdraw-all-btn" class="glass-button bg-red-900/80 hover:bg-red-900 text-white text-sm disabled:opacity-30 !py-3">
                     Снять Все
                 </button>
             </div>
@@ -329,8 +395,8 @@
 
         <!-- YOUTUBE NFT Распродажа (Лимитированное издание) -->
         <div class="glass-card p-4 mb-6 border border-yellow-500/50">
-            <div class="flex justify-between items-center mb-2">
-                <p class="text-xl font-semibold text-white flex items-center">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
+                <p class="text-xl font-semibold text-white flex items-center mb-2 sm:mb-0">
                     <!-- SVG-логотип YouTube -->
                     <svg class="mr-2 w-6 h-6 text-red-600 fill-current" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path fill-rule="evenodd" clip-rule="evenodd" d="M19.61 6.31C19.1 5.76 18.42 5.37 17.65 5.16C15.82 4.67 12 4.67 12 4.67C12 4.67 8.18 4.67 6.35 5.16C5.58 5.37 4.9 5.76 4.39 6.31C3.84 6.89 3.52 7.57 3.39 8.35C3.12 10.05 3.12 12 3.12 12C3.12 12 3.12 13.95 3.39 15.65C3.52 16.43 3.84 17.11 4.39 17.69C4.9 18.24 5.58 18.63 6.35 18.84C8.18 19.33 12 19.33 12 19.33C12 19.33 15.82 19.33 17.65 18.84C18.42 18.63 19.1 18.24 19.61 17.69C20.16 17.11 20.48 16.43 20.61 15.65C20.88 13.95 20.88 12 20.88 12C20.88 12 20.88 10.05 20.61 8.35C20.48 7.57 20.16 6.89 19.61 6.31ZM10.5 15.3V8.7L15.6 12L10.5 15.3Z" fill="currentColor"/>
@@ -449,7 +515,7 @@
         nftLegendaryCount: 0,
         youtubeNftOwned: 0, 
         
-        // НОВОЕ: Объект для хранения количества каждой купленной GPU (id: count)
+        // Объект для хранения количества каждой купленной GPU (id: count)
         gpuOwned: {}, 
         
         miningRatePerMin: 0.00, 
@@ -644,7 +710,7 @@
         setTimeout(() => feedback.classList.add('hidden'), 5000);
     }
 
-    // --- 3. ЛОГИКА БАНКА, КОШЕЛЬКА И ОБМЕНА (без изменений) ---
+    // --- 3. ЛОГИКА БАНКА, КОШЕЛЬКА И ОБМЕНА ---
 
     function bankDeposit(amount) {
         const bankFeedback = document.getElementById('bank-feedback');
@@ -741,7 +807,7 @@
 
         saveState();
         updateUI();
-        showFeedback(walletFeedback, `✅ ${amount.toFixed(2)} $ успешно отправлены пользователю ${recipientId} (симуляция).`, 'success');
+        showModal("Перевод успешен", `✅ ${amount.toFixed(2)} $ успешно отправлены пользователю ${recipientId} (симуляция).`);
     }
     
     function copyUserId() {
@@ -751,7 +817,8 @@
             tempInput.value = userId;
             document.body.appendChild(tempInput);
             tempInput.select();
-            document.execCommand('copy');
+            // Используем execCommand для лучшей совместимости в iframe
+            document.execCommand('copy'); 
             document.body.removeChild(tempInput);
             showModal("ID Скопирован", `Ваш ID пользователя (${userId}) скопирован в буфер обмена.`);
         } catch (err) {
@@ -783,7 +850,7 @@
         }
     }
 
-    // --- 4. ЛОГИКА МАГАЗИНА И NFT (СИЛЬНО ИЗМЕНЕНА) ---
+    // --- 4. ЛОГИКА МАГАЗИНА И NFT ---
     
     // Новая функция покупки для 30 GPU
     function buyGpu(gpuId) {
@@ -817,7 +884,7 @@
         }
     }
 
-    // Общая функция для ASIC и NFT-бокса
+    // Общая функция для ASIC
     function buyEquipment(type, price, rateIncrease) {
         const shopFeedback = document.getElementById('shop-feedback');
         shopFeedback.classList.add('hidden');
@@ -828,18 +895,20 @@
         }
         
         gameState.usd -= price;
-        gameState.miningRatePerMin += rateIncrease; // Ставка для ASIC фиксирована, GPU считают через calculateTotalMiningRate
 
-        if (type === 'asic') gameState.asicCount += 1;
+        if (type === 'asic') {
+            gameState.asicCount += 1;
+            gameState.miningRatePerMin += rateIncrease; // Добавляем ставку ASIC явно
+        }
         
         // Динамика цены: покупка оборудования повышает спрос и цену на TON
         gameState.inGameTonPrice += 0.05;
         gameState.inGameTonPrice = parseFloat(gameState.inGameTonPrice.toFixed(2));
 
-        saveState();
+        saveState(); // Сработает calculateTotalMiningRate для GPU/NFT, но для ASIC нужно было добавить сразу
         updateUI();
         
-        showFeedback(shopFeedback, `✅ Куплен ${type === 'asic' ? 'ASIC-майнер' : 'NFT-бокс'}!`, 'success');
+        showFeedback(shopFeedback, `✅ Куплен ${type === 'asic' ? 'ASIC-майнер' : 'Оборудование'}!`, 'success');
     }
     
     function buyYoutubeNft() {
@@ -909,23 +978,24 @@
         GPUS.forEach(gpu => {
             const ownedCount = gameState.gpuOwned[gpu.id] || 0;
             const card = document.createElement('div');
-            card.className = 'glass-card p-4 flex flex-col justify-between transition duration-200';
+            // Уменьшаем размер текста на мобильном для карточек
+            card.className = 'glass-card p-4 flex flex-col justify-between transition duration-200 text-sm';
             
             const isDisabled = gameState.usd < gpu.price;
             
             card.innerHTML = `
                 <div class="flex items-center justify-between mb-2">
                     <p class="text-2xl">${gpu.icon}</p>
-                    <p class="text-xl font-semibold text-white">${gpu.name}</p>
+                    <p class="text-lg font-semibold text-white truncate ml-2">${gpu.name}</p>
                 </div>
-                <p class="text-sm text-gray-400">Доход: +${gpu.rate.toFixed(2)} TON/мин</p>
-                <p class="text-sm text-gray-400 mb-3">У вас: <span class="font-bold text-cyan-300">${ownedCount}</span> шт.</p>
+                <p class="text-xs text-gray-400">Доход: +${gpu.rate.toFixed(2)} TON/мин</p>
+                <p class="text-xs text-gray-400 mb-3">У вас: <span class="font-bold text-cyan-300">${ownedCount}</span> шт.</p>
                 
                 <div class="flex justify-between items-center mt-auto">
-                    <p class="text-green-400 font-bold text-xl">${gpu.price} $</p>
+                    <p class="text-green-400 font-bold text-lg">${gpu.price} $</p>
                     <button 
                         onclick="buyGpu('${gpu.id}')" 
-                        class="glass-button ton-gradient text-white text-sm py-2 px-4 ${isDisabled ? 'opacity-30' : ''}"
+                        class="glass-button ton-gradient text-white text-xs py-2 px-4 ${isDisabled ? 'opacity-30' : ''}"
                         ${isDisabled ? 'disabled' : ''}
                     >
                         Купить
@@ -1065,19 +1135,32 @@
         // 2. Установка интервала для расчета пассивного дохода и процентов
         setInterval(() => {
             updateGameMetrics(); 
+            // Сохранение состояния происходит только при сборе/покупке/банковских операциях
         }, UPDATE_INTERVAL_MS);
 
-        // 3. Настройка UI Telegram
+        // 3. Настройка UI Telegram (для лучшей интеграции)
         WebApp.ready(); 
         WebApp.setBackgroundColor('#0b0f19');
         WebApp.setHeaderColor('#0b0f19');
         
-        // 4. Установка начальной вкладки
+        // 4. Скрытие экрана загрузки и показ контента
+        document.getElementById('loading-overlay').classList.add('hidden');
+        
+        // 5. Установка начальной вкладки
         changeTab(currentTab);
         
-        // 5. Первичное обновление UI 
+        // 6. Первичное обновление UI 
         if (!gameState) updateUI();
     };
+
+    // Запуск анимации загрузки при старте
+    document.addEventListener('DOMContentLoaded', () => {
+         // Проверяем, если Firebase уже инициализировался (очень быстро)
+         if (window.firebase.userIsReady) {
+             window.onFirebaseReady();
+         }
+    });
+
 </script>
 
 </body>
