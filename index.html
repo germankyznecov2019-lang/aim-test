@@ -36,7 +36,6 @@
             color: #48bb78; 
             font-weight: bold;
         }
-        /* Style for the quantity input */
         .quantity-input {
             -moz-appearance: textfield;
         }
@@ -63,297 +62,344 @@
 
     <div id="app" class="w-full max-w-7xl mx-auto p-6 app-container shadow-2xl rounded-xl border border-gray-600">
         
-        <!-- User ID Display (Crucial for collaboration/transfers) -->
-        <div class="mb-4 text-xs text-right text-gray-500">
-            Ваш ID для переводов: <span id="currentUserId" class="font-mono text-gray-300 select-all cursor-pointer">Загрузка...</span>
-        </div>
-
-        <!-- Navigation Sections -->
-        <nav class="flex space-x-2 sm:space-x-6 border-b border-gray-700 mb-8">
-            <button id="navProfile" 
-                    onclick="showSection('profile')" 
-                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200 tab-active">
-                Профиль
-            </button>
-            <button id="navMining" 
-                    onclick="showSection('mining')" 
-                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
-                Ферма
-            </button>
-            <button id="navShop" 
-                    onclick="showSection('shop')" 
-                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
-                Видеокарты
-            </button>
-            <button id="navBank" 
-                    onclick="showSection('bank')" 
-                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
-                Банк (USD)
-            </button>
-            <button id="navMarket" 
-                    onclick="showSection('market')" 
-                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
-                Рынок TON
-            </button>
-            <button id="navWallet" 
-                    onclick="showSection('wallet')" 
-                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
-                Кошелек
-            </button>
-        </nav>
-        <!-- End Navigation Sections -->
-        
         <!-- ========================================================================= -->
-        <!-- 6. PROFILE SECTION (NEW) -->
+        <!-- 0. AUTHENTICATION SECTION (Visible until logged in) -->
         <!-- ========================================================================= -->
-        <div id="profileSection" class="p-4" style="display:block;">
-            <h2 class="text-4xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3">
-                Профиль Telegram
-            </h2>
-            <div class="max-w-md mx-auto p-6 bg-gray-700 rounded-xl shadow-2xl">
-                <div class="flex flex-col items-center mb-6">
-                    <!-- Avatar Placeholder -->
-                    <div class="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center mb-4 border-4 border-gray-500 overflow-hidden">
-                        <!-- Using a placeholder image with 'TG' text -->
-                        <img src="https://placehold.co/96x96/4a5568/ffffff?text=TG" alt="Аватар" class="w-full h-full object-cover opacity-90">
-                    </div>
-                    
-                    <p id="profileNickname" class="text-3xl font-bold text-white">Крипто-Шахтер</p>
-                    <p id="profileUsername" class="text-lg text-gray-400">@TON_Miner_777</p>
-                </div>
-
-                <div class="space-y-4 pt-4 border-t border-gray-600">
-                    <div class="p-3 bg-gray-800 rounded-lg">
-                        <p class="text-sm uppercase text-gray-400">Ваш ID (для системы/переводов)</p>
-                        <p id="profileTelegramId" class="text-xl font-mono text-green-400 break-all mt-1">Загрузка...</p>
-                    </div>
-                    
-                    <div class="p-3 bg-gray-800 rounded-lg">
-                        <p class="text-sm uppercase text-gray-400">Текущий Хэшрейт Фермы</p>
-                        <p id="profileHashrate" class="text-xl font-bold text-blue-400 mt-1">0 MH/s</p>
-                    </div>
-
-                    <div class="p-3 bg-gray-800 rounded-lg">
-                        <p class="text-sm uppercase text-gray-400">Накоплено TON (Кошелек)</p>
-                        <p id="profileTonWallet" class="text-xl font-bold text-purple-400 mt-1">0.0000 TON</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================================================= -->
-        <!-- 1. MINING DASHBOARD SECTION -->
-        <!-- ========================================================================= -->
-        <div id="miningDashboard" class="p-4" style="display:none;">
-            <h2 class="text-4xl font-extrabold text-green-400 mb-6 border-b border-gray-700 pb-3">
-                Ферма - Панель Управления
-            </h2>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                
-                <!-- Balance Card (USD) -->
-                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500">
-                    <p class="text-gray-400 text-sm uppercase">Текущий Баланс (USD)</p>
-                    <p id="currentBalance" class="text-4xl font-bold text-white mt-1">
-                        100 $
-                    </p>
-                    <p class="text-xs text-gray-500 mt-2">Баланс, доступный для покупок.</p>
-                </div>
-                
-                <!-- Hashrate Card -->
-                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
-                    <p class="text-gray-400 text-sm uppercase">Общая Мощность Фермы</p>
-                    <p id="totalHashrate" class="text-4xl font-bold text-white mt-1">
-                        0 MH/s
-                    </p>
-                    <p class="text-xs text-gray-500 mt-2">Мощность всех установленных видеокарт.</p>
-                </div>
-
-                <!-- TON Earned Card -->
-                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-purple-500">
-                    <p class="text-gray-400 text-sm uppercase">Накоплено TON (для сбора)</p>
-                    <div class="flex items-center justify-between mt-1">
-                        <p id="pendingTonEarnedDisplay" class="text-4xl font-bold text-white">
-                            0.0000 TON
-                        </p>
-                        <button id="collectTonBtn" onclick="collectTon()" 
-                                class="px-3 py-1 bg-purple-600 text-white text-sm font-semibold rounded-full shadow-md transition duration-200 hover:bg-purple-700 disabled:opacity-50 min-w-[100px]"
-                                disabled>
-                            Собрать
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">После сбора TON будут в вашем кошельке.</p>
-                </div>
-                
-                <!-- TON Price Card -->
-                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-red-500">
-                    <p class="text-gray-400 text-sm uppercase">Цена TON</p>
-                    <p id="tonPrice" class="text-4xl font-bold text-white mt-1">
-                        15 $
-                    </p>
-                    <p class="text-xs text-gray-500 mt-2">Курс: 1 TON = 15 USD.</p>
-                </div>
-            </div>
-
-            <div class="mt-8 p-6 bg-gray-800 rounded-lg">
-                <h3 class="text-xl font-semibold text-gray-300 mb-4">Журнал Операций</h3>
-                <ul id="operationsLog" class="space-y-2 text-sm text-gray-400">
-                    <!-- Log entries will be added here -->
-                    <li>[00:00:00] Игра запущена.</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- ========================================================================= -->
-        <!-- 2. PRODUCT SHOP SECTION -->
-        <!-- ========================================================================= -->
-        <div id="productShop" class="p-4" style="display:none;">
-            <h1 class="text-4xl font-extrabold text-gray-100 mb-4 text-center">
-                Видеокарты для Вашей Фермы
+        <div id="authSection" class="p-8 max-w-md mx-auto" style="display:none;">
+            <h1 class="text-4xl font-extrabold text-white text-center mb-8">
+                Симулятор Майнинга TON
             </h1>
-            <p class="text-center text-gray-400 mb-10">
-                Все карты в наличии в НЕОГРАНИЧЕННОМ количестве.
-            </p>
-
-            <!-- Product Grid Container -->
-            <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <!-- Cards will be injected here by JavaScript -->
-            </div>
-        </div>
-        <!-- End Product Shop Section -->
-
-        <!-- ========================================================================= -->
-        <!-- 3. BANK SECTION -->
-        <!-- ========================================================================= -->
-        <div id="bankSection" class="p-4" style="display:none;">
-            <h2 class="text-4xl font-extrabold text-yellow-400 mb-6 border-b border-gray-700 pb-3">
-                Банк "Крипто-Капитал"
-            </h2>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-gray-800 p-6 sm:p-8 rounded-xl shadow-2xl">
+                <h2 class="text-3xl font-bold text-green-400 mb-6 text-center">Вход по Email</h2>
                 
-                <!-- Deposit/Interest Card -->
-                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500 lg:col-span-2">
-                    <h3 class="text-2xl font-semibold text-white mb-4">Депозит "Выгодный" (Почасовой)</h3>
+                <div id="emailInputStep" class="space-y-4">
+                    <p class="text-gray-400 text-center">Введите ваш Email, чтобы получить волшебную ссылку для входа.</p>
+                    <input type="email" id="authEmail" placeholder="Email" class="input-base w-full text-lg" required>
                     
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-yellow-700">
-                            <span class="text-gray-300">Ваш Депозит:</span>
-                            <span id="depositBalanceDisplay" class="text-3xl font-bold text-yellow-400">0 $</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-green-700">
-                            <span class="text-gray-300">Действующая Ставка (в час):</span>
-                            <span id="effectiveInterestRateDisplay" class="text-3xl font-bold text-green-400">5.0%</span>
-                        </div>
-                        
-                        <p class="text-sm text-gray-400 mt-2">
-                            Внесение и снятие средств производится полностью. Ставка повышается покупкой улучшения.
-                        </p>
-                    </div>
-
-                    <div class="mt-6 space-y-3">
-                        <!-- Deposit/Withdraw All Buttons -->
-                        <div class="flex space-x-4">
-                            <button onclick="depositAll()" class="w-1/2 py-2 bg-yellow-600 text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition">Внести Все</button>
-                            <button onclick="withdrawAll()" class="w-1/2 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition">Снять Все</button>
-                        </div>
-                        
-                        <h4 class="text-xl font-semibold text-gray-300 pt-4 border-t border-gray-600">Улучшение Ставки</h4>
-                        <!-- Upgrade Buttons - Text updated by JS on load -->
-                        <button id="upgradeStandardBtn" onclick="buyRateUpgrade(false)" class="w-full py-2 bg-green-700 text-white font-semibold rounded-lg hover:bg-green-600 transition">
-                            Улучшить Ставку: +1%
-                        </button>
-                        <button id="upgradeSpecialBtn" onclick="buyRateUpgrade(true)" class="w-full py-2 bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-600 transition">
-                            Специальное Улучшение: +100%
-                        </button>
-                    </div>
+                    <button id="sendLinkBtn" onclick="sendSignInLink()" class="w-full py-3 button-primary text-black font-semibold rounded-lg shadow-md transition duration-200">
+                        Отправить ссылку для входа
+                    </button>
+                    
+                    <p id="authError" class="text-red-400 text-center text-sm mt-3" style="display:none;"></p>
+                </div>
+                
+                <div id="linkSentStep" class="space-y-4 text-center" style="display:none;">
+                    <p class="text-2xl text-yellow-400 font-bold">Проверьте Email!</p>
+                    <p class="text-gray-300">Мы отправили волшебную ссылку на <span id="sentEmailDisplay" class="font-bold text-white"></span>.</p>
+                    <p class="text-sm text-gray-400">Нажмите на ссылку в письме, а затем **обновите** эту страницу (кнопка Preview) для завершения входа.</p>
+                    <button onclick="resendLink()" class="w-full py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition">
+                        Отправить ссылку повторно
+                    </button>
+                    <button onclick="location.reload()" class="w-full py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-500 transition">
+                        Я кликнул! Обновить
+                    </button>
                 </div>
 
-                <!-- Send Money Card -->
-                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
-                    <h3 class="text-2xl font-semibold text-white mb-4">Перевод Другу (Мок)</h3>
-                    <p class="text-sm text-gray-400 mb-4">Используйте Telegram ID или Username получателя (из его Профиля).</p>
-                    <div class="space-y-4">
-                         <label for="recipientIdInput" class="block text-sm font-medium text-gray-300">Telegram ID/Username Получателя:</label>
-                         <input type="text" id="recipientIdInput" placeholder="Telegram ID, Username (@user) или 28-значный ID" class="input-base w-full">
-                         
-                         <label for="transferAmountInput" class="block text-sm font-medium text-gray-300">Сумма Перевода ($):</label>
-                         <input type="number" id="transferAmountInput" placeholder="0" min="1" class="input-base w-full">
-                         
-                         <button onclick="sendMoneyToFriend()" class="w-full py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-500 transition">Отправить Средства</button>
-                    </div>
-                </div>
             </div>
-
-            <p class="mt-8 text-sm text-gray-500 italic">
-                *Проценты начисляются в симуляции каждые 5 секунд. Перевод другу — это моковая функция, которая списывает деньги, но не гарантирует реального зачисления другому пользователю вне среды Canvas.
+            <p class="text-center text-gray-500 text-sm mt-6">
+                Ваш прогресс будет сохранен с помощью Firebase.
             </p>
         </div>
 
         <!-- ========================================================================= -->
-        <!-- 4. MARKET SECTION (NEW) -->
+        <!-- App Content (Hidden until logged in) -->
         <!-- ========================================================================= -->
-        <div id="marketSection" class="p-4" style="display:none;">
-            <h2 class="text-4xl font-extrabold text-blue-400 mb-6 border-b border-gray-700 pb-3">
-                Рынок TON - Обмен на USD
-            </h2>
+        <div id="appContent" style="display:none;">
 
-            <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500 max-w-xl mx-auto">
-                <h3 class="text-2xl font-semibold text-white mb-4">Продать Ваши TON</h3>
+            <!-- User ID Display (Crucial for collaboration/transfers) -->
+            <div class="mb-4 text-xs text-right text-gray-500">
+                Ваш Email: <span id="currentUserId" class="font-mono text-gray-300 select-all cursor-pointer">Загрузка...</span>
+            </div>
 
-                <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-purple-700 mb-4">
-                    <span class="text-gray-300">TON в Кошельке (доступно для продажи):</span>
-                    <span id="marketTonBalanceDisplay" class="text-3xl font-bold text-purple-400">0.0000 TON</span>
-                </div>
-
-                <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-red-700 mb-6">
-                    <span class="text-gray-300">Текущий Курс Обмена:</span>
-                    <span id="marketTonPriceDisplay" class="text-3xl font-bold text-red-400">15.00 $</span>
-                </div>
-
-                <div class="mb-6">
-                    <p class="text-lg font-medium text-gray-300">При продаже всего TON вы получите:</p>
-                    <p id="estimatedUsdGain" class="text-4xl font-extrabold text-green-400 mt-2">0.00 $</p>
-                </div>
-                
-                <button id="sellAllTonBtn" onclick="sellAllTon()" 
-                        class="w-full py-3 bg-blue-600 text-white text-xl font-bold rounded-lg hover:bg-blue-500 transition disabled:opacity-50"
-                        disabled>
-                    Продать ВСЕ TON
+            <!-- Navigation Sections -->
+            <nav class="flex space-x-2 sm:space-x-6 border-b border-gray-700 mb-8">
+                <button id="navProfile" 
+                        onclick="showSection('profile')" 
+                        class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200 tab-active">
+                    Профиль
                 </button>
+                <button id="navMining" 
+                        onclick="showSection('mining')" 
+                        class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                    Ферма
+                </button>
+                <button id="navShop" 
+                        onclick="showSection('shop')" 
+                        class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                    Видеокарты
+                </button>
+                <button id="navBank" 
+                        onclick="showSection('bank')" 
+                        class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                    Банк (USD)
+                </button>
+                <button id="navMarket" 
+                        onclick="showSection('market')" 
+                        class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                    Рынок TON
+                </button>
+                <button id="navWallet" 
+                        onclick="showSection('wallet')" 
+                        class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                    Кошелек
+                </button>
+            </nav>
+            <!-- End Navigation Sections -->
+            
+            <!-- ========================================================================= -->
+            <!-- 6. PROFILE SECTION (Authenticated Dashboard) -->
+            <!-- ========================================================================= -->
+            <div id="profileSection" class="p-4" style="display:block;">
+                <h2 class="text-4xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3">
+                    Профиль Пользователя
+                </h2>
+                <div class="max-w-md mx-auto p-6 bg-gray-700 rounded-xl shadow-2xl">
+                    <div class="flex flex-col items-center mb-6">
+                        <!-- Avatar Placeholder -->
+                        <div class="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center mb-4 border-4 border-gray-500 overflow-hidden">
+                            <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        
+                        <p id="profileNickname" class="text-3xl font-bold text-white">Крипто-Шахтер</p>
+                        <p id="profileUsername" class="text-lg text-gray-400"></p> <!-- Will be user email -->
+                    </div>
 
-                <p class="mt-4 text-sm text-gray-400 italic">
-                    Продажа происходит по фиксированному курсу. Средства будут немедленно зачислены на ваш USD баланс.
+                    <div class="space-y-4 pt-4 border-t border-gray-600">
+                        <div class="p-3 bg-gray-800 rounded-lg">
+                            <p class="text-sm uppercase text-gray-400">UID (Идентификатор пользователя)</p>
+                            <p id="profileTelegramId" class="text-xl font-mono text-green-400 break-all mt-1">Не авторизован</p>
+                        </div>
+                        
+                        <div class="p-3 bg-gray-800 rounded-lg">
+                            <p class="text-sm uppercase text-gray-400">Текущий Хэшрейт Фермы</p>
+                            <p id="profileHashrate" class="text-xl font-bold text-blue-400 mt-1">0 MH/s</p>
+                        </div>
+
+                        <div class="p-3 bg-gray-800 rounded-lg">
+                            <p class="text-sm uppercase text-gray-400">Накоплено TON (Кошелек)</p>
+                            <p id="profileTonWallet" class="text-xl font-bold text-purple-400 mt-1">0.0000 TON</p>
+                        </div>
+
+                        <button onclick="logoutUser()" class="w-full py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition mt-6">
+                            Выход из Аккаунта
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================================================= -->
+            <!-- 1. MINING DASHBOARD SECTION (Unchanged) -->
+            <!-- ========================================================================= -->
+            <div id="miningDashboard" class="p-4" style="display:none;">
+                <h2 class="text-4xl font-extrabold text-green-400 mb-6 border-b border-gray-700 pb-3">
+                    Ферма - Панель Управления
+                </h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Balance Card (USD) -->
+                    <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500">
+                        <p class="text-gray-400 text-sm uppercase">Текущий Баланс (USD)</p>
+                        <p id="currentBalance" class="text-4xl font-bold text-white mt-1">
+                            0 $
+                        </p>
+                        <p class="text-xs text-gray-500 mt-2">Баланс, доступный для покупок.</p>
+                    </div>
+                    
+                    <!-- Hashrate Card -->
+                    <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
+                        <p class="text-gray-400 text-sm uppercase">Общая Мощность Фермы</p>
+                        <p id="totalHashrate" class="text-4xl font-bold text-white mt-1">
+                            0 MH/s
+                        </p>
+                        <p class="text-xs text-gray-500 mt-2">Мощность всех установленных видеокарт.</p>
+                    </div>
+
+                    <!-- TON Earned Card -->
+                    <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-purple-500">
+                        <p class="text-gray-400 text-sm uppercase">Накоплено TON (для сбора)</p>
+                        <div class="flex items-center justify-between mt-1">
+                            <p id="pendingTonEarnedDisplay" class="text-4xl font-bold text-white">
+                                0.0000 TON
+                            </p>
+                            <button id="collectTonBtn" onclick="collectTon()" 
+                                    class="px-3 py-1 bg-purple-600 text-white text-sm font-semibold rounded-full shadow-md transition duration-200 hover:bg-purple-700 disabled:opacity-50 min-w-[100px]"
+                                    disabled>
+                                Собрать
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">После сбора TON будут в вашем кошельке.</p>
+                    </div>
+                    
+                    <!-- TON Price Card -->
+                    <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-red-500">
+                        <p class="text-gray-400 text-sm uppercase">Цена TON</p>
+                        <p id="tonPrice" class="text-4xl font-bold text-white mt-1">
+                            15 $
+                        </p>
+                        <p class="text-xs text-gray-500 mt-2">Курс: 1 TON = 15 USD.</p>
+                    </div>
+                </div>
+
+                <div class="mt-8 p-6 bg-gray-800 rounded-lg">
+                    <h3 class="text-xl font-semibold text-gray-300 mb-4">Журнал Операций</h3>
+                    <ul id="operationsLog" class="space-y-2 text-sm text-gray-400">
+                        <!-- Log entries will be added here -->
+                        <li>[00:00:00] Ожидание авторизации...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ========================================================================= -->
+            <!-- 2. PRODUCT SHOP SECTION (Unchanged) -->
+            <!-- ========================================================================= -->
+            <div id="productShop" class="p-4" style="display:none;">
+                <h1 class="text-4xl font-extrabold text-gray-100 mb-4 text-center">
+                    Видеокарты для Вашей Фермы
+                </h1>
+                <p class="text-center text-gray-400 mb-10">
+                    Все карты в наличии в НЕОГРАНИЧЕННОМ количестве.
+                </p>
+
+                <!-- Product Grid Container -->
+                <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- Cards will be injected here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- ========================================================================= -->
+            <!-- 3. BANK SECTION (Unchanged) -->
+            <!-- ========================================================================= -->
+            <div id="bankSection" class="p-4" style="display:none;">
+                <h2 class="text-4xl font-extrabold text-yellow-400 mb-6 border-b border-gray-700 pb-3">
+                    Банк "Крипто-Капитал"
+                </h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Deposit/Interest Card -->
+                    <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500 lg:col-span-2">
+                        <h3 class="text-2xl font-semibold text-white mb-4">Депозит "Выгодный" (Почасовой)</h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-yellow-700">
+                                <span class="text-gray-300">Ваш Депозит:</span>
+                                <span id="depositBalanceDisplay" class="text-3xl font-bold text-yellow-400">0 $</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-green-700">
+                                <span class="text-gray-300">Действующая Ставка (в час):</span>
+                                <span id="effectiveInterestRateDisplay" class="text-3xl font-bold text-green-400">5.0%</span>
+                            </div>
+                            
+                            <p class="text-sm text-gray-400 mt-2">
+                                Внесение и снятие средств производится полностью. Ставка повышается покупкой улучшения.
+                            </p>
+                        </div>
+
+                        <div class="mt-6 space-y-3">
+                            <!-- Deposit/Withdraw All Buttons -->
+                            <div class="flex space-x-4">
+                                <button onclick="depositAll()" class="w-1/2 py-2 bg-yellow-600 text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition">Внести Все</button>
+                                <button onclick="withdrawAll()" class="w-1/2 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition">Снять Все</button>
+                            </div>
+                            
+                            <h4 class="text-xl font-semibold text-gray-300 pt-4 border-t border-gray-600">Улучшение Ставки</h4>
+                            <!-- Upgrade Buttons - Text updated by JS on load -->
+                            <button id="upgradeStandardBtn" onclick="buyRateUpgrade(false)" class="w-full py-2 bg-green-700 text-white font-semibold rounded-lg hover:bg-green-600 transition">
+                                Улучшить Ставку: +1%
+                            </button>
+                            <button id="upgradeSpecialBtn" onclick="buyRateUpgrade(true)" class="w-full py-2 bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-600 transition">
+                                Специальное Улучшение: +100%
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Send Money Card -->
+                    <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
+                        <h3 class="text-2xl font-semibold text-white mb-4">Перевод Другу (Мок)</h3>
+                        <p class="text-sm text-gray-400 mb-4">Используйте UID (ID Пользователя) или Email получателя.</p>
+                        <div class="space-y-4">
+                            <label for="recipientIdInput" class="block text-sm font-medium text-gray-300">UID/Email Получателя:</label>
+                            <input type="text" id="recipientIdInput" placeholder="UID или Email" class="input-base w-full">
+                            
+                            <label for="transferAmountInput" class="block text-sm font-medium text-gray-300">Сумма Перевода ($):</label>
+                            <input type="number" id="transferAmountInput" placeholder="0" min="1" class="input-base w-full">
+                            
+                            <button onclick="sendMoneyToFriend()" class="w-full py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-500 transition">Отправить Средства</button>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="mt-8 text-sm text-gray-500 italic">
+                    *Проценты начисляются в симуляции каждые 5 секунд. Перевод другу — это моковая функция, которая списывает деньги, но не гарантирует реального зачисления другому пользователю вне среды Canvas.
                 </p>
             </div>
-        </div>
 
+            <!-- ========================================================================= -->
+            <!-- 4. MARKET SECTION (Unchanged) -->
+            <!-- ========================================================================= -->
+            <div id="marketSection" class="p-4" style="display:none;">
+                <h2 class="text-4xl font-extrabold text-blue-400 mb-6 border-b border-gray-700 pb-3">
+                    Рынок TON - Обмен на USD
+                </h2>
 
-        <!-- ========================================================================= -->
-        <!-- 5. WALLET SECTION -->
-        <!-- ========================================================================= -->
-        <div id="walletSection" class="p-4" style="display:none;">
-            <h2 class="text-4xl font-extrabold text-purple-400 mb-6 border-b border-gray-700 pb-3">
-                Общий Кошелек Активов
-            </h2>
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500 max-w-xl mx-auto">
+                    <h3 class="text-2xl font-semibold text-white mb-4">Продать Ваши TON</h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                <!-- USD Total -->
-                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500">
-                    <p class="text-gray-400 text-sm uppercase">Доступный Баланс (USD)</p>
-                    <p id="walletCurrentBalanceDisplay" class="text-5xl font-bold text-white mt-2">
-                        <!-- Balance will be updated here -->
+                    <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-purple-700 mb-4">
+                        <span class="text-gray-300">TON в Кошельке (доступно для продажи):</span>
+                        <span id="marketTonBalanceDisplay" class="text-3xl font-bold text-purple-400">0.0000 TON</span>
+                    </div>
+
+                    <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-red-700 mb-6">
+                        <span class="text-gray-300">Текущий Курс Обмена:</span>
+                        <span id="marketTonPriceDisplay" class="text-3xl font-bold text-red-400">15.00 $</span>
+                    </div>
+
+                    <div class="mb-6">
+                        <p class="text-lg font-medium text-gray-300">При продаже всего TON вы получите:</p>
+                        <p id="estimatedUsdGain" class="text-4xl font-extrabold text-green-400 mt-2">0.00 $</p>
+                    </div>
+                    
+                    <button id="sellAllTonBtn" onclick="sellAllTon()" 
+                            class="w-full py-3 bg-blue-600 text-white text-xl font-bold rounded-lg hover:bg-blue-500 transition disabled:opacity-50"
+                            disabled>
+                        Продать ВСЕ TON
+                    </button>
+
+                    <p class="mt-4 text-sm text-gray-400 italic">
+                        Продажа происходит по фиксированному курсу. Средства будут немедленно зачислены на ваш USD баланс.
                     </p>
-                    <p class="text-xs text-gray-500 mt-2">Средства для покупок и депозитов.</p>
                 </div>
+            </div>
 
-                <!-- TON Wallet Balance -->
-                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
-                    <p class="text-gray-400 text-sm uppercase">TON в Кошельке (для продажи)</p>
-                    <p id="walletTonBalanceDisplay" class="text-5xl font-bold text-white mt-2">
-                         <!-- TON available for sale will be updated here -->
-                    </p>
-                    <p class="text-xs text-gray-500 mt-2">Продайте их на вкладке "Рынок TON".</p>
+
+            <!-- ========================================================================= -->
+            <!-- 5. WALLET SECTION (Unchanged) -->
+            <!-- ========================================================================= -->
+            <div id="walletSection" class="p-4" style="display:none;">
+                <h2 class="text-4xl font-extrabold text-purple-400 mb-6 border-b border-gray-700 pb-3">
+                    Общий Кошелек Активов
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- USD Total -->
+                    <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500">
+                        <p class="text-gray-400 text-sm uppercase">Доступный Баланс (USD)</p>
+                        <p id="walletCurrentBalanceDisplay" class="text-5xl font-bold text-white mt-2">
+                            0 $
+                        </p>
+                        <p class="text-xs text-gray-500 mt-2">Средства для покупок и депозитов.</p>
+                    </div>
+
+                    <!-- TON Wallet Balance -->
+                    <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
+                        <p class="text-gray-400 text-sm uppercase">TON в Кошельке (для продажи)</p>
+                        <p id="walletTonBalanceDisplay" class="text-5xl font-bold text-white mt-2">
+                            0.0000 TON
+                        </p>
+                        <p class="text-xs text-gray-500 mt-2">Продайте их на вкладке "Рынок TON".</p>
+                    </div>
+                    
                 </div>
                 
             </div>
@@ -370,11 +416,15 @@
     <script type="module">
         // --- FIREBASE IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signOut,
+            sendSignInLinkToEmail,
+            isSignInWithEmailLink,
+            signInWithEmailLink
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // setLogLevel('Debug'); // Uncomment to see Firebase logs in console
         
         // --- GAME CONSTANTS ---
         const currencyUnit = 'долларов ($)';
@@ -390,39 +440,42 @@
         const rateUpgradeCost = 1000; // $1,000 for +1%
         const specialRateUpgradeCost = 130000; // $130,000 for +100%
 
-        // --- GLOBAL GAME STATE (Initial Values) ---
+        // Action code settings for Email Link (Mandatory for Firebase Auth)
+        const actionCodeSettings = {
+            // URL of the immersive environment is used as the continue URL.
+            // This is crucial: Firebase will redirect back here after the link click.
+            url: window.location.href, 
+            handleCodeInApp: true,
+        };
+
+        // --- GLOBAL GAME STATE ---
         let gameState = {
             balance: 100, // Starting balance 100 $ (Available funds)
             totalHashrate: 0,
             installedCardsCount: 0,
             pendingTonEarned: 0, 
-            tonWalletBalance: 0, // TON collected and ready for sale
+            tonWalletBalance: 0, 
             purchases: {},
-            depositBalance: 0, // Deposited money in the bank
+            depositBalance: 0, 
             purchasedInterestRate: 5, 
+            email: null, // Field for user email
         };
 
-        // --- MOCK PROFILE DATA ---
-        const mockProfile = {
-            nickname: 'Крипто-Шахтер',
-            username: '@TON_Miner_777', // Моковое имя пользователя. Если нет, поставить null.
-            // Аватарка обрабатывается через CSS/HTML
-        };
-        
         // --- FIREBASE GLOBALS ---
         let db, auth;
         let userId = null;
-        let isAuthReady = false;
+        let isAuthReady = false; // Tracks if initial auth check and data load is complete
 
         // --- INTERVAL GLOBALS ---
         let bankInterval;
         let miningInterval;
 
+        // Local storage key for pending sign-in email
+        const EMAIL_STORAGE_KEY = 'emailForSignIn';
 
         // --- FIREBASE CONFIG & PATHS (MANDATORY) ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Firestore Paths (Private User Data)
         const getGameStateRef = (uid) => {
@@ -441,16 +494,161 @@
                     delay *= 2; // Exponential backoff
                 }
             }
-            // Should not be reached if retries > 0, but added for completeness
             throw new Error("Failed to execute Firebase operation after multiple retries.");
         }
         
+        // =========================================================================
+        // AUTHENTICATION LOGIC (Magic Link)
+        // =========================================================================
+
+        /**
+         * Displays authentication error message.
+         */
+        function showAuthError(message) {
+            const errorElement = document.getElementById('authError');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+        
+        /**
+         * Toggles the UI state between Email Input and Link Sent message.
+         */
+        function setAuthStep(step) {
+            const inputStep = document.getElementById('emailInputStep');
+            const sentStep = document.getElementById('linkSentStep');
+            
+            if (step === 'input') {
+                inputStep.style.display = 'block';
+                sentStep.style.display = 'none';
+            } else if (step === 'sent') {
+                inputStep.style.display = 'none';
+                sentStep.style.display = 'block';
+            }
+            document.getElementById('authError').style.display = 'none';
+        }
+
+        /**
+         * Handles sending the sign-in link to the user's email.
+         */
+        window.sendSignInLink = async function() {
+            const emailInput = document.getElementById('authEmail');
+            const email = emailInput.value.trim();
+            if (!email) {
+                showAuthError('Пожалуйста, введите Email.');
+                return;
+            }
+            
+            showAuthError(''); // Clear error
+            
+            try {
+                // Send the link
+                await fetchWithRetry(() => sendSignInLinkToEmail(auth, email, actionCodeSettings));
+                
+                // Save the email locally for the sign-in completion step
+                localStorage.setItem(EMAIL_STORAGE_KEY, email);
+
+                // Update UI to show instructions
+                document.getElementById('sentEmailDisplay').textContent = email;
+                setAuthStep('sent');
+                showMessage('УСПЕХ', `Волшебная ссылка отправлена на ${email}!`, 'info');
+                
+            } catch (error) {
+                console.error("Sending link failed:", error);
+                showAuthError('Ошибка отправки ссылки. Убедитесь, что Email корректен.');
+            }
+        }
+        
+        /**
+         * Re-sends the sign-in link using the stored email.
+         */
+        window.resendLink = function() {
+            const storedEmail = localStorage.getItem(EMAIL_STORAGE_KEY);
+            if (storedEmail) {
+                document.getElementById('authEmail').value = storedEmail;
+                sendSignInLink();
+            } else {
+                 setAuthStep('input');
+                 showAuthError('Пожалуйста, введите Email снова.');
+            }
+        }
+
+        /**
+         * Checks the current URL for a sign-in link and completes the sign-in process.
+         */
+        async function completeSignInWithLink() {
+            if (!isSignInWithEmailLink(auth, window.location.href)) {
+                return false; // Not a sign-in link URL
+            }
+
+            let email = localStorage.getItem(EMAIL_STORAGE_KEY);
+
+            if (!email) {
+                // In a real app, you'd prompt the user for the email. 
+                // Here, we try to use the auth status change for simplicity.
+                console.warn("No stored email found. Cannot complete sign-in from link.");
+                return false;
+            }
+            
+            try {
+                // Complete the sign-in
+                await fetchWithRetry(() => signInWithEmailLink(auth, email, window.location.href));
+                
+                // Clear the stored email after successful sign-in
+                localStorage.removeItem(EMAIL_STORAGE_KEY);
+                
+                showMessage('ВХОД УСПЕШЕН', `Добро пожаловать, ${email}!`, 'success');
+                // The onAuthStateChanged listener will handle the rest (UI/Data load)
+                return true;
+            } catch (error) {
+                console.error("Sign-in with link failed:", error);
+                showMessage('ОШИБКА ВХОДА', 'Не удалось войти. Возможно, ссылка устарела. Отправьте новую.', 'error');
+                localStorage.removeItem(EMAIL_STORAGE_KEY);
+                return false;
+            }
+        }
+
+        /**
+         * Logs out the current user.
+         */
+        window.logoutUser = async function() {
+            if (!auth) return;
+            try {
+                // Stop simulation intervals before logging out
+                stopSimulation();
+                await fetchWithRetry(() => signOut(auth));
+                // onAuthStateChanged listener will handle UI update
+                showMessage('ВЫХОД', 'Вы успешно вышли из аккаунта.', 'info');
+                setAuthStep('input');
+            } catch (error) {
+                console.error("Logout failed:", error);
+                showMessage('ОШИБКА', 'Не удалось выйти из аккаунта.', 'error');
+            }
+        }
+        
+        // =========================================================================
+        // GAME & UI LOGIC (Mostly Unchanged)
+        // =========================================================================
+
+        /**
+         * Formats a number for display.
+         */
+        function formatNumber(num, fixed = 2) {
+            const parsedNum = parseFloat(num);
+            if (isNaN(parsedNum)) return '0';
+            const multiplier = Math.pow(10, fixed);
+            const roundedNum = Math.round(parsedNum * multiplier) / multiplier;
+            
+            return new Intl.NumberFormat('ru-RU', {
+                minimumFractionDigits: fixed,
+                maximumFractionDigits: fixed
+            }).format(roundedNum);
+        }
+
         /**
          * Centralized function to show transient success/error messages.
          */
         function showMessage(title, message, type = 'success') {
             const messageBox = document.getElementById('messageBox');
-            
             let classes = "fixed bottom-4 right-4 p-4 text-sm rounded-lg transition duration-300 opacity-100 z-50 shadow-2xl border ";
             let bgColor, textColor, borderColor;
 
@@ -472,64 +670,12 @@
             messageBox.innerHTML = `<strong>${title}:</strong> ${message}`;
             messageBox.style.display = 'block';
 
-            // Hide message after 5 seconds
             setTimeout(() => {
                 messageBox.style.opacity = 0;
                 setTimeout(() => {
                     messageBox.style.display = 'none';
                 }, 300);
             }, 5000);
-        }
-
-        /**
-         * Formats a number for display.
-         */
-        function formatNumber(num, fixed = 2) {
-            const parsedNum = parseFloat(num);
-            if (isNaN(parsedNum)) return '0';
-            const multiplier = Math.pow(10, fixed);
-            const roundedNum = Math.round(parsedNum * multiplier) / multiplier;
-            
-            // Format to use spaces as thousands separators (Russian locale)
-            return new Intl.NumberFormat('ru-RU', {
-                minimumFractionDigits: fixed,
-                maximumFractionDigits: fixed
-            }).format(roundedNum);
-        }
-
-        /**
-         * Calculates the effective interest rate (now just returns the purchased rate).
-         */
-        function calculateInterestRate() {
-            // The rate is now determined only by purchases, not the deposit amount.
-            return gameState.purchasedInterestRate; 
-        }
-
-        /**
-         * Applies the calculated hourly interest to the deposit balance.
-         */
-        function applyBankInterest() {
-            if (gameState.depositBalance > 0 && isAuthReady) {
-                // 1. Calculate the rate
-                const hourlyRate = calculateInterestRate();
-                
-                // 2. Determine the time factor (5 seconds / 3600 seconds per hour)
-                const timeFactor = bankIntervalMs / (1000 * 3600); 
-
-                // 3. Calculate actual interest earned in this interval
-                const interestEarned = gameState.depositBalance * (hourlyRate / 100) * timeFactor;
-
-                // 4. Update the deposit balance
-                gameState.depositBalance += interestEarned;
-                
-                // 5. Update UI
-                updateDashboard();
-                
-                // 6. Log every 12 intervals (60 seconds)
-                if (Math.floor(Date.now() / bankIntervalMs) % 12 === 0) {
-                     logOperation(`БАНК: Доход ${interestEarned.toFixed(4)} $ (${hourlyRate.toFixed(1)}% в час).`);
-                }
-            }
         }
 
         /**
@@ -545,24 +691,22 @@
             const newEntry = document.createElement('li');
             newEntry.textContent = `[${timeString}] ${message}`;
 
-            // Add to the top of the list
             logElement.prepend(newEntry);
             
-            // Keep the log short (e.g., max 10 entries)
             while (logElement.children.length > 10) {
                 logElement.removeChild(logElement.lastChild);
             }
         }
-
+        
         /**
-         * Updates the display of the Mining Dashboard and all other sections.
+         * Updates the display of the entire app UI.
          */
         function updateDashboard() {
             if (!isAuthReady) return; 
             
             const formattedBalance = formatNumber(gameState.balance);
             const formattedDeposit = formatNumber(gameState.depositBalance);
-            const effectiveRate = calculateInterestRate(); 
+            const effectiveRate = gameState.purchasedInterestRate; 
 
             // 1. Dashboard updates (Mining)
             document.getElementById('currentBalance').textContent = formattedBalance + ' $';
@@ -573,7 +717,6 @@
             const pendingTon = gameState.pendingTonEarned;
             document.getElementById('pendingTonEarnedDisplay').textContent = pendingTon.toFixed(4) + ` ${miningCrypto}`;
             
-            // Toggle Collect Button state
             const collectBtn = document.getElementById('collectTonBtn');
             if (collectBtn) {
                 collectBtn.disabled = pendingTon < 0.0001; 
@@ -581,97 +724,138 @@
             }
             
             // 3. Bank updates
-            const depositDisplay = document.getElementById('depositBalanceDisplay');
-            const rateDisplay = document.getElementById('effectiveInterestRateDisplay');
-            if (depositDisplay) depositDisplay.textContent = formattedDeposit + ' $';
-            if (rateDisplay) rateDisplay.textContent = `${effectiveRate.toFixed(1)}%`;
+            document.getElementById('depositBalanceDisplay').textContent = formattedDeposit + ' $';
+            document.getElementById('effectiveInterestRateDisplay').textContent = `${effectiveRate.toFixed(1)}%`;
 
             // 4. Market updates
             const currentTonBalance = gameState.tonWalletBalance;
             const estimatedGain = currentTonBalance * cryptoPriceUsd;
 
-            const marketTonBalanceDisplay = document.getElementById('marketTonBalanceDisplay');
-            if (marketTonBalanceDisplay) marketTonBalanceDisplay.textContent = currentTonBalance.toFixed(4) + ` ${miningCrypto}`;
-
-            const marketTonPriceDisplay = document.getElementById('marketTonPriceDisplay');
-            if (marketTonPriceDisplay) marketTonPriceDisplay.textContent = cryptoPriceUsd.toFixed(2) + ' $';
+            document.getElementById('marketTonBalanceDisplay').textContent = currentTonBalance.toFixed(4) + ` ${miningCrypto}`;
+            document.getElementById('marketTonPriceDisplay').textContent = cryptoPriceUsd.toFixed(2) + ' $';
             
-            const estimatedUsdGain = document.getElementById('estimatedUsdGain');
-            if (estimatedUsdGain) estimatedUsdGain.textContent = formatNumber(estimatedGain, 2) + ' $';
+            document.getElementById('estimatedUsdGain').textContent = formatNumber(estimatedGain, 2) + ' $';
             
             const sellAllTonBtn = document.getElementById('sellAllTonBtn');
             if (sellAllTonBtn) sellAllTonBtn.disabled = currentTonBalance < 0.0001;
 
 
             // 5. Wallet updates
-            const walletCurrentBalanceDisplay = document.getElementById('walletCurrentBalanceDisplay');
-            const walletTonBalanceDisplay = document.getElementById('walletTonBalanceDisplay');
-            
-            if (walletCurrentBalanceDisplay) walletCurrentBalanceDisplay.textContent = formattedBalance + ' $';
-            if (walletTonBalanceDisplay) walletTonBalanceDisplay.textContent = gameState.tonWalletBalance.toFixed(4) + ` ${miningCrypto}`;
+            document.getElementById('walletCurrentBalanceDisplay').textContent = formattedBalance + ' $';
+            document.getElementById('walletTonBalanceDisplay').textContent = gameState.tonWalletBalance.toFixed(4) + ` ${miningCrypto}`;
 
-            // 6. User ID Display (Header)
-            const userIdDisplay = document.getElementById('currentUserId');
-            if (userIdDisplay && userId) {
-                 userIdDisplay.textContent = userId;
-            }
+            // 6. User ID/Email Display (Header & Profile)
+            const userEmail = gameState.email || 'Не авторизован';
+            document.getElementById('currentUserId').textContent = userEmail;
 
-            // 7. Profile updates
-            const profileTelegramId = document.getElementById('profileTelegramId');
-            const profileHashrate = document.getElementById('profileHashrate');
-            const profileTonWallet = document.getElementById('profileTonWallet');
-            const profileUsername = document.getElementById('profileUsername');
+            document.getElementById('profileUsername').textContent = userEmail;
+            document.getElementById('profileTelegramId').textContent = userId || 'Ожидание UID...';
+            document.getElementById('profileHashrate').textContent = formatNumber(gameState.totalHashrate, 0) + ' MH/s';
+            document.getElementById('profileTonWallet').textContent = gameState.tonWalletBalance.toFixed(4) + ` ${miningCrypto}`;
+        }
 
-            if (profileTelegramId && userId) profileTelegramId.textContent = userId;
-            if (profileHashrate) profileHashrate.textContent = formatNumber(gameState.totalHashrate, 0) + ' MH/s';
-            if (profileTonWallet) profileTonWallet.textContent = gameState.tonWalletBalance.toFixed(4) + ` ${miningCrypto}`;
-            
-            if (profileUsername) {
-                // Check if username is 'set' in mock data
-                if (mockProfile.username) {
-                    profileUsername.textContent = mockProfile.username;
-                    profileUsername.classList.remove('text-red-400');
-                    profileUsername.classList.add('text-gray-400');
-                } else {
-                    profileUsername.textContent = 'не задано';
-                    profileUsername.classList.remove('text-gray-400');
-                    profileUsername.classList.add('text-red-400');
+        function stopSimulation() {
+             if (miningInterval) clearInterval(miningInterval);
+             if (bankInterval) clearInterval(bankInterval);
+             miningInterval = null;
+             bankInterval = null;
+        }
+
+        function startSimulation() {
+            stopSimulation(); // Ensure previous intervals are cleared
+            logOperation(`Начат майнинг ${miningCrypto} по курсу ${cryptoPriceUsd} $.`);
+            logOperation(`Начат расчет банковских процентов (обновление каждые ${bankIntervalMs / 1000} сек).`);
+
+            // Start Mining Loop
+            miningInterval = setInterval(() => {
+                if (gameState.totalHashrate > 0) {
+                    const tonEarned = gameState.totalHashrate * baseTonPerMHS * (miningIntervalMs / 1000);
+                    gameState.pendingTonEarned += tonEarned; 
+
+                    if (Math.floor(Date.now() / 1000) % 10 === 0) {
+                        logOperation(`Накоплено ~${(tonEarned * 10).toFixed(6)} TON за 10 сек.`);
+                    }
+                    updateDashboard();
                 }
-            }
-            const profileNickname = document.getElementById('profileNickname');
-            if (profileNickname) profileNickname.textContent = mockProfile.nickname;
+            }, miningIntervalMs);
+            
+            // Start Bank Interest Loop
+            bankInterval = setInterval(() => {
+                applyBankInterest();
+                saveGameState(); 
+            }, bankIntervalMs); 
         }
 
         /**
-         * Deposits all available cash into the bank.
+         * Applies the calculated hourly interest to the deposit balance.
          */
-        window.depositAll = function() {
-            if (!isAuthReady) return;
-            if (gameState.balance <= 0) {
-                showMessage('ОШИБКА ДЕПОЗИТА', 'Нечего вносить. Ваш баланс равен 0 $.', 'error');
-                return;
+        function applyBankInterest() {
+            if (gameState.depositBalance > 0 && isAuthReady) {
+                const hourlyRate = gameState.purchasedInterestRate;
+                const timeFactor = bankIntervalMs / (1000 * 3600); 
+
+                const interestEarned = gameState.depositBalance * (hourlyRate / 100) * timeFactor;
+
+                gameState.depositBalance += interestEarned;
+                
+                updateDashboard();
+                
+                if (Math.floor(Date.now() / bankIntervalMs) % 12 === 0) {
+                     logOperation(`БАНК: Доход ${interestEarned.toFixed(4)} $ (${hourlyRate.toFixed(1)}% в час).`);
+                }
             }
+        }
+
+
+        // Other game functions (collectTon, sellAllTon, depositAll, etc.) remain the same...
+
+        window.collectTon = function() {
+            if (!isAuthReady) { showMessage('ОШИБКА', 'Пожалуйста, войдите в систему.', 'error'); return; }
+            if (gameState.pendingTonEarned < 0.0001) { showMessage('ПРЕДУПРЕЖДЕНИЕ', 'Нечего собирать.', 'info'); return; }
+            
+            const tonToCollect = gameState.pendingTonEarned;
+            gameState.tonWalletBalance += tonToCollect; 
+            gameState.pendingTonEarned = 0; 
+            logOperation(`СОБРАНО: ${tonToCollect.toFixed(4)} TON. Переведены в Кошелек TON.`);
+            updateDashboard();
+            saveGameState();
+            showMessage('СБОР УСПЕШЕН', `Успешно собрано ${tonToCollect.toFixed(4)} TON!`, 'info');
+        }
+
+        window.sellAllTon = function() {
+            if (!isAuthReady) { showMessage('ОШИБКА', 'Пожалуйста, войдите в систему.', 'error'); return; }
+            if (gameState.tonWalletBalance < 0.0001) { showMessage('ОШИБКА ПРОДАЖИ', 'В вашем кошельке нет TON для продажи.', 'error'); return; }
+
+            const tonToSell = gameState.tonWalletBalance;
+            const usdGain = tonToSell * cryptoPriceUsd;
+
+            gameState.balance += usdGain;
+            gameState.tonWalletBalance = 0;
+
+            logOperation(`ПРОДАЖА: Продано ${tonToSell.toFixed(4)} TON. Получено ${formatNumber(usdGain, 2)} $`);
+            updateDashboard();
+            saveGameState();
+            showMessage('ОБМЕН УСПЕШЕН', `Вы продали ${tonToSell.toFixed(4)} TON и получили ${formatNumber(usdGain, 2)} $!`, 'success');
+        }
+
+        window.depositAll = function() {
+            if (!isAuthReady) { showMessage('ОШИБКА', 'Пожалуйста, войдите в систему.', 'error'); return; }
+            if (gameState.balance <= 0) { showMessage('ОШИБКА ДЕПОЗИТА', 'Нечего вносить.', 'error'); return; }
             
             const amount = gameState.balance;
             gameState.balance = 0;
             gameState.depositBalance += amount;
             
-            logOperation(`ДЕПОЗИТ: Внесено ВСЕ (${formatNumber(amount)} $) под ${calculateInterestRate().toFixed(1)}% в час.`);
+            logOperation(`ДЕПОЗИТ: Внесено ВСЕ (${formatNumber(amount)} $)`);
             showMessage('УСПЕХ', `Внесено ${formatNumber(amount)} $ на депозит.`, 'success');
 
             updateDashboard();
             saveGameState();
         }
 
-        /**
-         * Withdraws all deposited money into the cash balance.
-         */
         window.withdrawAll = function() {
-            if (!isAuthReady) return;
-            if (gameState.depositBalance <= 0) {
-                showMessage('ОШИБКА ВЫВОДА', 'На депозите нет средств для снятия.', 'error');
-                return;
-            }
+            if (!isAuthReady) { showMessage('ОШИБКА', 'Пожалуйста, войдите в систему.', 'error'); return; }
+            if (gameState.depositBalance <= 0) { showMessage('ОШИБКА ВЫВОДА', 'На депозите нет средств.', 'error'); return; }
             
             const amount = gameState.depositBalance;
             gameState.depositBalance = 0;
@@ -684,11 +868,8 @@
             saveGameState();
         }
 
-        /**
-         * Handles the purchase of interest rate upgrades.
-         */
         window.buyRateUpgrade = function(isSpecial) {
-            if (!isAuthReady) return;
+            if (!isAuthReady) { showMessage('ОШИБКА', 'Пожалуйста, войдите в систему.', 'error'); return; }
             let cost, rateIncrease, upgradeName;
 
             if (isSpecial) {
@@ -702,7 +883,7 @@
             }
 
             if (gameState.balance < cost) {
-                showMessage('ОШИБКА ПОКУПКИ', `Недостаточно средств. Нужно ${formatNumber(cost)} $. Ваш баланс: ${formatNumber(gameState.balance)} $.`, 'error');
+                showMessage('ОШИБКА ПОКУПКИ', `Недостаточно средств. Нужно ${formatNumber(cost)} $.`, 'error');
                 return;
             }
 
@@ -710,293 +891,109 @@
             gameState.purchasedInterestRate += rateIncrease;
 
             logOperation(`УЛУЧШЕНИЕ: Куплен апгрейд "${upgradeName}" за ${formatNumber(cost)} $. Новая ставка: ${gameState.purchasedInterestRate.toFixed(1)}%`);
-            showMessage('УСПЕХ', `Ставка улучшена на +${rateIncrease}%. Текущая ставка: ${gameState.purchasedInterestRate.toFixed(1)}%`, 'success');
+            showMessage('УСПЕХ', `Ставка улучшена на +${rateIncrease}%.`, 'success');
             
             updateDashboard();
             saveGameState();
         }
 
-        /**
-         * Handles the mock transfer of funds to another user ID.
-         */
         window.sendMoneyToFriend = function() {
-            if (!isAuthReady) return;
+            if (!isAuthReady) { showMessage('ОШИБКА', 'Пожалуйста, войдите в систему.', 'error'); return; }
             const recipientIdInput = document.getElementById('recipientIdInput');
             const transferAmountInput = document.getElementById('transferAmountInput');
             
             const recipientId = recipientIdInput.value.trim();
             let amount = parseFloat(transferAmountInput.value);
             
-            if (!recipientId || recipientId.length < 3) { // Minimal check for username or ID
-                showMessage('ОШИБКА ПЕРЕВОДА', 'Введите корректный Telegram ID или Username получателя.', 'error');
+            if (!recipientId || recipientId.length < 3) {
+                showMessage('ОШИБКА ПЕРЕВОДА', 'Введите корректный UID или Email получателя.', 'error');
                 return;
             }
             
-            // Check if user is trying to send to self (using their numeric ID or mock username)
-            if (recipientId === userId || recipientId === mockProfile.username) {
+            if (recipientId === gameState.email) {
                 showMessage('ОШИБКА ПЕРЕВОДА', 'Вы не можете отправить деньги самому себе.', 'error');
                 return;
             }
 
-            if (isNaN(amount) || amount <= 0) {
-                showMessage('ОШИБКА ПЕРЕВОДА', 'Введите корректную сумму для перевода.', 'error');
-                return;
-            }
-            
-            amount = parseFloat(amount.toFixed(2));
-            
-            if (amount > gameState.balance) {
-                showMessage('ОШИБКА ПЕРЕВОДА', `Недостаточно средств. Ваш баланс: ${formatNumber(gameState.balance)} $`, 'error');
+            if (isNaN(amount) || amount <= 0 || amount > gameState.balance) {
+                showMessage('ОШИБКА ПЕРЕВОДА', `Некорректная сумма или недостаточно средств. Ваш баланс: ${formatNumber(gameState.balance)} $`, 'error');
                 return;
             }
 
-            // --- Mock Transfer Execution ---
+            amount = parseFloat(amount.toFixed(2));
             gameState.balance -= amount;
             
-            // Clear inputs
             recipientIdInput.value = '';
             transferAmountInput.value = '';
             
-            // Determine recipient display name for log
-            const recipientDisplay = recipientId.startsWith('@') ? recipientId : recipientId.substring(0, 8) + '...';
+            const recipientDisplay = recipientId.includes('@') ? recipientId : recipientId.substring(0, 8) + '...';
 
-            // Log and UI update
             logOperation(`ПЕРЕВОД: Отправлено ${formatNumber(amount)} $ пользователю ${recipientDisplay}`);
             updateDashboard();
             saveGameState();
             showMessage('ПЕРЕВОД УСПЕШЕН', `Имитация отправки ${formatNumber(amount)} $ пользователю ${recipientDisplay}`, 'info');
         }
 
-        /**
-         * Starts the continuous mining simulation loop and bank interest.
-         */
-        function startSimulation() {
-            logOperation(`Начат майнинг ${miningCrypto} по курсу ${cryptoPriceUsd} $.`);
-            logOperation(`Начат расчет банковских процентов (обновление каждые ${bankIntervalMs / 1000} сек).`);
-
-            // Start Mining Loop
-            miningInterval = setInterval(() => {
-                if (gameState.totalHashrate > 0) {
-                    const tonEarned = gameState.totalHashrate * baseTonPerMHS * (miningIntervalMs / 1000);
-                    gameState.pendingTonEarned += tonEarned; 
-
-                    // Log mining every 10 seconds (10 intervals)
-                    if (Math.floor(Date.now() / 1000) % 10 === 0) {
-                        logOperation(`Накоплено ~${(tonEarned * 10).toFixed(6)} TON за 10 сек.`);
-                    }
-                    updateDashboard();
-                }
-            }, miningIntervalMs);
-            
-            // Start Bank Interest Loop
-            bankInterval = setInterval(() => {
-                applyBankInterest();
-                // Save every time interest is applied to ensure deposit growth is saved
-                saveGameState(); 
-            }, bankIntervalMs); 
-        }
-
-        /**
-         * Collects pending TON earnings and moves them to the TON Wallet balance.
-         */
-        window.collectTon = function() {
-            if (!isAuthReady) return;
-            if (gameState.pendingTonEarned < 0.0001) {
-                showMessage('ПРЕДУПРЕЖДЕНИЕ', 'Нечего собирать.', 'info');
-                return; 
-            }
-            
-            const tonToCollect = gameState.pendingTonEarned;
-
-            gameState.tonWalletBalance += tonToCollect; // Add to TON wallet
-            gameState.pendingTonEarned = 0; 
-
-            logOperation(`СОБРАНО: ${tonToCollect.toFixed(4)} TON. Переведены в Кошелек TON.`);
-            updateDashboard();
-
-            saveGameState();
-            showMessage('СБОР УСПЕШЕН', `Успешно собрано ${tonToCollect.toFixed(4)} TON! Теперь они в Кошельке.`, 'info');
-        }
-
-        /**
-         * Sells all TON in the wallet for USD at the current fixed rate.
-         */
-        window.sellAllTon = function() {
-            if (!isAuthReady) return;
-            if (gameState.tonWalletBalance < 0.0001) {
-                showMessage('ОШИБКА ПРОДАЖИ', 'В вашем кошельке нет TON для продажи.', 'error');
-                return;
-            }
-
-            const tonToSell = gameState.tonWalletBalance;
-            const usdGain = tonToSell * cryptoPriceUsd;
-
-            gameState.balance += usdGain;
-            gameState.tonWalletBalance = 0;
-
-            logOperation(`ПРОДАЖА: Продано ${tonToSell.toFixed(4)} TON по курсу ${cryptoPriceUsd} $. Получено ${formatNumber(usdGain, 2)} $`);
-            updateDashboard();
-            saveGameState();
-            showMessage('ОБМЕН УСПЕШЕН', `Вы продали ${tonToSell.toFixed(4)} TON и получили ${formatNumber(usdGain, 2)} $!`, 'success');
-        }
-
-
-        /**
-         * Loads game state from Firestore and starts the periodic save.
-         */
-        async function loadGameState() {
-            if (!db || !userId) {
-                isAuthReady = true;
-                logOperation("Внимание: Firebase не инициализирован. Используется локальный/начальный баланс.");
-                updateDashboard();
-                return;
-            }
-            
-            try {
-                const docRef = getGameStateRef(userId);
-                const docSnap = await fetchWithRetry(() => getDoc(docRef));
-
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    // Load and merge data from Firestore, ensuring all keys are present
-                    gameState = {
-                        balance: data.balance || 100,
-                        totalHashrate: data.totalHashrate || 0,
-                        installedCardsCount: data.installedCardsCount || 0,
-                        pendingTonEarned: data.pendingTonEarned || 0,
-                        tonWalletBalance: data.tonWalletBalance || 0, 
-                        purchases: data.purchases || {},
-                        depositBalance: data.depositBalance || 0, 
-                        purchasedInterestRate: data.purchasedInterestRate || 5, 
-                    };
-                    logOperation(`Состояние игры загружено из базы данных. Баланс: ${formatNumber(gameState.balance)} $`);
-                } else {
-                    await saveGameState(); 
-                    logOperation("Состояние игры инициализировано (новый игрок).");
-                }
-            } catch (e) {
-                console.error("Ошибка загрузки состояния игры:", e);
-                logOperation(`ОШИБКА: Не удалось загрузить состояние игры (${e.message}). Использован локальный баланс.`);
-            }
-
-            isAuthReady = true;
-            updateDashboard();
-        }
-
-        /**
-         * Saves current game state to Firestore.
-         */
-        async function saveGameState() {
-            if (!db || !userId || !isAuthReady) return;
-
-            try {
-                const docRef = getGameStateRef(userId);
-                
-                const dataToSave = {
-                    balance: gameState.balance,
-                    totalHashrate: gameState.totalHashrate,
-                    installedCardsCount: gameState.installedCardsCount,
-                    pendingTonEarned: gameState.pendingTonEarned,
-                    tonWalletBalance: gameState.tonWalletBalance, 
-                    purchases: gameState.purchases,
-                    depositBalance: gameState.depositBalance, 
-                    purchasedInterestRate: gameState.purchasedInterestRate, 
-                };
-                
-                await fetchWithRetry(() => setDoc(docRef, dataToSave));
-                // console.log("Game state saved successfully.");
-            } catch (e) {
-                console.error("Ошибка сохранения состояния игры:", e);
-            }
-        }
-
-        /**
-         * Switches the visibility between the main sections.
-         */
         window.showSection = function(sectionName) { 
-            const sections = {
-                'profile': document.getElementById('profileSection'),
-                'mining': document.getElementById('miningDashboard'),
-                'shop': document.getElementById('productShop'),
-                'bank': document.getElementById('bankSection'),
-                'market': document.getElementById('marketSection'), 
-                'wallet': document.getElementById('walletSection')
-            };
+            const sections = ['profileSection', 'miningDashboard', 'productShop', 'bankSection', 'marketSection', 'walletSection'];
+            const navs = ['navProfile', 'navMining', 'navShop', 'navBank', 'navMarket', 'navWallet'];
 
-            const navs = {
-                'profile': document.getElementById('navProfile'),
-                'mining': document.getElementById('navMining'),
-                'shop': document.getElementById('navShop'),
-                'bank': document.getElementById('navBank'),
-                'market': document.getElementById('navMarket'), 
-                'wallet': document.getElementById('navWallet')
-            };
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            navs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('tab-active');
+            });
 
-            for (const key in sections) {
-                if (sections[key]) { 
-                    sections[key].style.display = 'none';
-                }
-                if (navs[key]) { 
-                    navs[key].classList.remove('tab-active');
-                }
-            }
+            const targetSection = document.getElementById(sectionName + 'Section');
+            const targetNav = document.getElementById('nav' + sectionName.charAt(0).toUpperCase() + sectionName.slice(1));
 
-            if (sections[sectionName]) {
-                sections[sectionName].style.display = 'block';
-                if (navs[sectionName]) {
-                    navs[sectionName].classList.add('tab-active');
-                }
-            }
+            if (targetSection) targetSection.style.display = 'block';
+            if (targetNav) targetNav.classList.add('tab-active');
 
             updateDashboard();
         }
-
-        // --- PRODUCT LOGIC (Mostly Unchanged) ---
+        
+        // --- PRODUCT LOGIC (Unchanged, included for completeness) ---
         const products = [
-            // Sorted by price in renderProducts()
+            { id: 34, name: 'ASIC Miner Pro V3', price: 150000, hashrate: 600, imageText: 'ASIC V3' },
+            { id: 35, name: 'Quantum Core GPU', price: 99999, hashrate: 450, imageText: 'Quantum' },
             { id: 10, name: 'RTX 5090 HASH', price: 85000, hashrate: 300, imageText: 'GPU 5090' },
-            { id: 11, name: 'RTX 4080 MAX', price: 60000, hashrate: 200, imageText: 'GPU 4080' },
-            { id: 12, name: 'RTX 4070 TURBO', price: 45000, hashrate: 150, imageText: 'GPU 4070' },
-            { id: 13, name: 'RTX 3090 TITAN', price: 70000, hashrate: 250, imageText: 'GPU 3090' },
-            { id: 14, name: 'RTX 3070 PRO', price: 35000, hashrate: 120, imageText: 'GPU 3070' },
-            { id: 15, name: 'RTX 3060 ECO', price: 28000, hashrate: 80, imageText: 'GPU 3060' },
             { id: 16, name: 'Radeon RX 7900 X', price: 75000, hashrate: 280, imageText: 'AMD 7900' },
+            { id: 13, name: 'RTX 3090 TITAN', price: 70000, hashrate: 250, imageText: 'GPU 3090' },
+            { id: 11, name: 'RTX 4080 MAX', price: 60000, hashrate: 200, imageText: 'GPU 4080' },
+            { id: 37, name: 'RTX 3080 VENTUS', price: 55000, hashrate: 190, imageText: 'RTX 3080' },
             { id: 17, name: 'Radeon RX 6800 XT', price: 50000, hashrate: 180, imageText: 'AMD 6800' },
-            { id: 18, name: 'GTX 1080 Ti LEGEND', price: 25000, hashrate: 65, imageText: 'GTX 1080' },
-            { id: 19, name: 'GTX 1660 SUPER', price: 18000, hashrate: 40, imageText: 'GTX 1660' },
-            { id: 20, name: 'Radeon RX 580', price: 15000, hashrate: 30, imageText: 'AMD 580' },
-            { id: 21, name: 'Vega 64 LIQUID', price: 22000, hashrate: 55, imageText: 'AMD Vega' },
-            { id: 22, name: 'RTX 2060 SUPER', price: 30000, hashrate: 100, imageText: 'RTX 2060' },
-            { id: 23, name: 'GTX 1070', price: 19000, hashrate: 50, imageText: 'GTX 1070' },
-            { id: 24, name: 'Radeon R9 390', price: 12000, hashrate: 25, imageText: 'AMD R9' },
+            { id: 32, name: 'Radeon VII', price: 48000, hashrate: 160, imageText: 'AMD VII' },
+            { id: 12, name: 'RTX 4070 TURBO', price: 45000, hashrate: 150, imageText: 'GPU 4070' },
             { id: 25, name: 'RTX A4000', price: 40000, hashrate: 130, imageText: 'RTX A4000' },
+            { id: 38, name: 'Radeon RX 6600', price: 24000, hashrate: 75, imageText: 'RX 6600' },
+            { id: 14, name: 'RTX 3070 PRO', price: 35000, hashrate: 120, imageText: 'GPU 3070' },
+            { id: 30, name: 'Intel Arc A770', price: 32000, hashrate: 110, imageText: 'INTEL A770' },
+            { id: 22, name: 'RTX 2060 SUPER', price: 30000, hashrate: 100, imageText: 'RTX 2060' },
+            { id: 15, name: 'RTX 3060 ECO', price: 28000, hashrate: 80, imageText: 'GPU 3060' },
+            { id: 33, name: 'Radeon RX 5700', price: 27000, hashrate: 90, imageText: 'RX 5700' },
+            { id: 18, name: 'GTX 1080 Ti LEGEND', price: 25000, hashrate: 65, imageText: 'GTX 1080' },
+            { id: 21, name: 'Vega 64 LIQUID', price: 22000, hashrate: 55, imageText: 'AMD Vega' },
+            { id: 23, name: 'GTX 1070', price: 19000, hashrate: 50, imageText: 'GTX 1070' },
+            { id: 19, name: 'GTX 1660 SUPER', price: 18000, hashrate: 40, imageText: 'GTX 1660' },
+            { id: 36, name: 'GTX 1060 6GB', price: 17000, hashrate: 35, imageText: 'GTX 1060' },
+            { id: 20, name: 'Radeon RX 580', price: 15000, hashrate: 30, imageText: 'AMD 580' },
+            { id: 31, name: 'RTX 5050 MOBILE', price: 15000, hashrate: 50, imageText: 'RTX 5050' },
+            { id: 24, name: 'Radeon R9 390', price: 12000, hashrate: 25, imageText: 'AMD R9' },
             { id: 26, name: 'GTX 970 GAMING', price: 10000, hashrate: 20, imageText: 'GTX 970' },
             { id: 27, name: 'RX 570 BASIC', price: 9000, hashrate: 18, imageText: 'RX 570' },
             { id: 28, name: 'GTX 750 Ti MINI', price: 5000, hashrate: 10, imageText: 'GTX 750' },
-            { id: 29, name: 'GTX 660 HASH', price: 10, hashrate: 8, imageText: 'GTX 660' }, 
-            { id: 30, name: 'Intel Arc A770', price: 32000, hashrate: 110, imageText: 'INTEL A770' },
-            { id: 31, name: 'RTX 5050 MOBILE', price: 15000, hashrate: 50, imageText: 'RTX 5050' },
-            { id: 32, name: 'Radeon VII', price: 48000, hashrate: 160, imageText: 'AMD VII' },
-            { id: 33, name: 'Radeon RX 5700', price: 27000, hashrate: 90, imageText: 'RX 5700' },
-            { id: 34, name: 'ASIC Miner Pro V3', price: 150000, hashrate: 600, imageText: 'ASIC V3' },
-            { id: 35, name: 'Quantum Core GPU', price: 99999, hashrate: 450, imageText: 'Quantum' },
-            { id: 36, name: 'GTX 1060 6GB', price: 17000, hashrate: 35, imageText: 'GTX 1060' },
-            { id: 37, name: 'RTX 3080 VENTUS', price: 55000, hashrate: 190, imageText: 'RTX 3080' },
-            { id: 38, name: 'Radeon RX 6600', price: 24000, hashrate: 75, imageText: 'RX 6600' },
-            { id: 39, name: 'Tesla K80 SERVER', price: 38000, hashrate: 140, imageText: 'Tesla K80' }
+            { id: 29, name: 'GTX 660 HASH', price: 10, hashrate: 8, imageText: 'GTX 660' }
         ];
 
         window.validateQuantity = function(inputElement, productId) {
             let value = parseInt(inputElement.value);
-            if (isNaN(value) || value < 1) {
-                inputElement.value = 1;
-            } else {
-                if (value > 999999) {
-                     inputElement.value = 999999;
-                } else {
-                    inputElement.value = value;
-                }
-            }
+            if (isNaN(value) || value < 1) { inputElement.value = 1; } 
+            else if (value > 999999) { inputElement.value = 999999; } 
+            else { inputElement.value = value; }
             updateTotal(productId);
         }
 
@@ -1005,12 +1002,8 @@
             let currentQuantity = parseInt(quantityInput.value);
             let newQuantity = currentQuantity + step;
             
-            if (newQuantity < 1) {
-                newQuantity = 1; 
-            }
-            if (newQuantity > 999999) {
-                newQuantity = 999999; 
-            }
+            if (newQuantity < 1) { newQuantity = 1; }
+            if (newQuantity > 999999) { newQuantity = 999999; }
 
             quantityInput.value = newQuantity;
             updateTotal(productId);
@@ -1030,17 +1023,11 @@
         }
 
         window.addToCart = function(productId) {
-            if (!isAuthReady) {
-                 showMessage('ОШИБКА', 'Подождите, пока загрузится база данных.', 'error');
-                 return;
-            }
+            if (!isAuthReady) { showMessage('ОШИБКА', 'Пожалуйста, войдите в систему.', 'error'); return; }
             const product = products.find(p => p.id === productId);
             const quantityInput = document.getElementById(`quantityInput-${productId}`);
             
-            if (!product || !quantityInput) {
-                 showMessage('ОШИБКА', 'Продукт не найден.', 'error');
-                 return;
-            }
+            if (!product || !quantityInput) { showMessage('ОШИБКА', 'Продукт не найден.', 'error'); return; }
 
             const quantity = parseInt(quantityInput.value) || 1;
             const itemCost = quantity * product.price;
@@ -1076,7 +1063,6 @@
                 <div class="gpu-card p-4 rounded-lg shadow-lg border border-gray-700 flex flex-col justify-between">
                     <div>
                         <div class="aspect-video overflow-hidden rounded-md mb-3 bg-gray-900 flex justify-center items-center">
-                            <!-- Placeholder image for the GPU item -->
                             <img src="https://placehold.co/600x300/3182ce/ffffff?text=${product.imageText}" 
                                  alt="${product.name}" 
                                  class="w-full h-full object-cover opacity-90">
@@ -1126,9 +1112,6 @@
             products.forEach(p => updateTotal(p.id));
         }
         
-        /**
-         * Updates the text of the upgrade buttons with current costs.
-         */
         function updateBankUpgradeButtons() {
             const standardBtn = document.getElementById('upgradeStandardBtn');
             const specialBtn = document.getElementById('upgradeSpecialBtn');
@@ -1141,8 +1124,94 @@
             }
         }
 
+
+        // =========================================================================
+        // FIREBASE DATA MANAGEMENT
+        // =========================================================================
+
         /**
-         * Initializes Firebase and authenticates the user.
+         * Loads game state from Firestore or initializes with defaults.
+         */
+        async function loadGameState() {
+            if (!db || !userId) {
+                isAuthReady = true;
+                return;
+            }
+            
+            try {
+                const docRef = getGameStateRef(userId);
+                const docSnap = await fetchWithRetry(() => getDoc(docRef));
+                const userEmail = auth.currentUser.email;
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    gameState = {
+                        balance: data.balance || 100,
+                        totalHashrate: data.totalHashrate || 0,
+                        installedCardsCount: data.installedCardsCount || 0,
+                        pendingTonEarned: data.pendingTonEarned || 0,
+                        tonWalletBalance: data.tonWalletBalance || 0, 
+                        purchases: data.purchases || {},
+                        depositBalance: data.depositBalance || 0, 
+                        purchasedInterestRate: data.purchasedInterestRate || 5, 
+                        email: userEmail
+                    };
+                    logOperation(`Состояние игры загружено для ${userEmail}. Баланс: ${formatNumber(gameState.balance)} $`);
+                } else {
+                    // New user or first login. Initialize and save.
+                    gameState = {
+                        balance: 100,
+                        totalHashrate: 0,
+                        installedCardsCount: 0,
+                        pendingTonEarned: 0,
+                        tonWalletBalance: 0, 
+                        purchases: {},
+                        depositBalance: 0, 
+                        purchasedInterestRate: 5, 
+                        email: userEmail
+                    };
+                    await saveGameState(); 
+                    logOperation(`Новый пользователь ${userEmail}. Состояние игры инициализировано.`);
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки состояния игры:", e);
+                logOperation(`ОШИБКА: Не удалось загрузить состояние игры (${e.message}). Использован локальный баланс.`);
+            }
+
+            isAuthReady = true;
+            updateDashboard();
+        }
+
+        /**
+         * Saves current game state to Firestore.
+         */
+        async function saveGameState() {
+            if (!db || !userId || !isAuthReady) return;
+
+            try {
+                const docRef = getGameStateRef(userId);
+                
+                const dataToSave = {
+                    balance: gameState.balance,
+                    totalHashrate: gameState.totalHashrate,
+                    installedCardsCount: gameState.installedCardsCount,
+                    pendingTonEarned: gameState.pendingTonEarned,
+                    tonWalletBalance: gameState.tonWalletBalance, 
+                    purchases: gameState.purchases,
+                    depositBalance: gameState.depositBalance, 
+                    purchasedInterestRate: gameState.purchasedInterestRate, 
+                    // Email is retrieved from Firebase Auth, not stored here
+                };
+                
+                await fetchWithRetry(() => setDoc(docRef, dataToSave));
+            } catch (e) {
+                console.error("Ошибка сохранения состояния игры:", e);
+            }
+        }
+
+
+        /**
+         * Initializes Firebase and sets up the Auth State Listener.
          */
         async function initFirebase() {
             try {
@@ -1150,41 +1219,60 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Check for initial auth token and sign in securely
-                if (initialAuthToken) {
-                    await setPersistence(auth, browserLocalPersistence);
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    // Fallback to anonymous sign-in if token is missing
-                    await setPersistence(auth, browserLocalPersistence);
-                    await signInAnonymously(auth);
+                logOperation("Firebase инициализирован. Ожидание состояния авторизации.");
+                
+                // --- TRY TO COMPLETE SIGN-IN FROM LINK ON PAGE LOAD ---
+                const signedIn = await completeSignInWithLink();
+                if (signedIn) {
+                    // Sign-in completed successfully, wait for onAuthStateChanged to fire
+                    return; 
                 }
 
-                // Wait for auth state to resolve
-                await new Promise((resolve) => {
-                    const unsubscribe = onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            userId = user.uid;
-                            logOperation(`Пользователь авторизован (ID: ${userId.substring(0, 8)}...).`);
-                            unsubscribe();
-                            resolve();
+                // --- AUTH STATE LISTENER ---
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        // User is signed in
+                        userId = user.uid;
+                        logOperation(`Пользователь ${user.email} авторизован (UID: ${userId.substring(0, 8)}...).`);
+
+                        // 1. Hide Auth UI, Show App UI
+                        document.getElementById('authSection').style.display = 'none';
+                        document.getElementById('appContent').style.display = 'block';
+
+                        // 2. Load game state and start simulation
+                        await loadGameState();
+                        startSimulation();
+                        showSection('profile'); // Default to profile dashboard
+                        
+                    } else {
+                        // User is signed out
+                        userId = null;
+                        isAuthReady = false;
+
+                        // 1. Hide App UI, Show Auth UI
+                        document.getElementById('appContent').style.display = 'none';
+                        document.getElementById('authSection').style.display = 'block';
+                        
+                        // 2. Determine which auth step to show
+                        const storedEmail = localStorage.getItem(EMAIL_STORAGE_KEY);
+                        if (storedEmail) {
+                            document.getElementById('sentEmailDisplay').textContent = storedEmail;
+                            setAuthStep('sent');
                         } else {
-                            logOperation("Ошибка авторизации. Запуск в гостевом режиме.");
-                            unsubscribe();
-                            resolve();
+                            setAuthStep('input');
                         }
-                    });
+
+                        // 3. Stop simulation and reset log
+                        stopSimulation();
+                        const logElement = document.getElementById('operationsLog');
+                        if(logElement) logElement.innerHTML = '<li>[00:00:00] Ожидание авторизации...</li>';
+                    }
                 });
-                
-                await loadGameState();
-                startSimulation();
 
             } catch (error) {
-                console.error("Ошибка инициализации или аутентификации Firebase:", error);
+                console.error("КРИТИЧЕСКАЯ ОШИБКА инициализации Firebase:", error);
                 logOperation(`КРИТИЧЕСКАЯ ОШИБКА: Не удалось подключиться к базе данных. Прогресс НЕ будет сохранен.`);
-                isAuthReady = true; 
-                updateDashboard();
-                startSimulation();
+                document.getElementById('authSection').style.display = 'block';
             }
         }
 
@@ -1192,8 +1280,7 @@
         // Initialize on load
         document.addEventListener('DOMContentLoaded', async () => {
             renderProducts();
-            updateBankUpgradeButtons(); // Set button text on load
-            showSection('profile'); // Show profile by default 
+            updateBankUpgradeButtons(); 
             await initFirebase(); 
         });
     </script>
