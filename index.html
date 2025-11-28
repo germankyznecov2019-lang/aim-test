@@ -3,1165 +3,1199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CryptoTycoon TON - Стеклянный Дизайн</title>
-    <!-- Подключение Tailwind CSS -->
+    <title>Симулятор Майнинга TON</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Подключение Telegram Web App SDK -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Подключение Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Включаем логирование для отладки (в продакшене лучше отключить)
-        setLogLevel('debug');
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            padding: 2rem 1rem;
+        }
+        .app-container {
+            background-color: #2d3748; 
+            color: #e2e8f0;
+        }
+        .gpu-card {
+            background-color: #1f2937; 
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .gpu-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+        }
+        .button-primary {
+            background-color: #48bb78; 
+            color: #1a202c;
+        }
+        .button-primary:hover {
+            background-color: #68d391;
+        }
+        .tab-active {
+            border-bottom: 2px solid #48bb78; 
+            color: #48bb78; 
+            font-weight: bold;
+        }
+        /* Style for the quantity input */
+        .quantity-input {
+            -moz-appearance: textfield;
+        }
+        .quantity-input::-webkit-outer-spin-button,
+        .quantity-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .input-base {
+            background-color: #1f2937;
+            border: 1px solid #4a5568;
+            color: #e2e8f0;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: border-color 0.2s;
+        }
+        .input-base:focus {
+            border-color: #63b3ed;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
 
-        // Глобальные переменные Firebase
-        window.firebase = {
-            db: null,
-            auth: null,
-            userId: null,
-            appId: typeof __app_id !== 'undefined' ? __app_id : 'default-app-id',
-            userIsReady: false,
+    <div id="app" class="w-full max-w-7xl mx-auto p-6 app-container shadow-2xl rounded-xl border border-gray-600">
+        
+        <!-- User ID Display (Crucial for collaboration/transfers) -->
+        <div class="mb-4 text-xs text-right text-gray-500">
+            Ваш ID для переводов: <span id="currentUserId" class="font-mono text-gray-300 select-all cursor-pointer">Загрузка...</span>
+        </div>
+
+        <!-- Navigation Sections -->
+        <nav class="flex space-x-2 sm:space-x-6 border-b border-gray-700 mb-8">
+            <button id="navProfile" 
+                    onclick="showSection('profile')" 
+                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200 tab-active">
+                Профиль
+            </button>
+            <button id="navMining" 
+                    onclick="showSection('mining')" 
+                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                Ферма
+            </button>
+            <button id="navShop" 
+                    onclick="showSection('shop')" 
+                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                Видеокарты
+            </button>
+            <button id="navBank" 
+                    onclick="showSection('bank')" 
+                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                Банк (USD)
+            </button>
+            <button id="navMarket" 
+                    onclick="showSection('market')" 
+                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                Рынок TON
+            </button>
+            <button id="navWallet" 
+                    onclick="showSection('wallet')" 
+                    class="px-2 sm:px-4 py-2 text-gray-400 text-sm sm:text-base font-medium cursor-pointer transition duration-150 ease-in-out hover:text-gray-200">
+                Кошелек
+            </button>
+        </nav>
+        <!-- End Navigation Sections -->
+        
+        <!-- ========================================================================= -->
+        <!-- 6. PROFILE SECTION (NEW) -->
+        <!-- ========================================================================= -->
+        <div id="profileSection" class="p-4" style="display:block;">
+            <h2 class="text-4xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3">
+                Профиль Telegram
+            </h2>
+            <div class="max-w-md mx-auto p-6 bg-gray-700 rounded-xl shadow-2xl">
+                <div class="flex flex-col items-center mb-6">
+                    <!-- Avatar Placeholder -->
+                    <div class="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center mb-4 border-4 border-gray-500 overflow-hidden">
+                        <!-- Using a placeholder image with 'TG' text -->
+                        <img src="https://placehold.co/96x96/4a5568/ffffff?text=TG" alt="Аватар" class="w-full h-full object-cover opacity-90">
+                    </div>
+                    
+                    <p id="profileNickname" class="text-3xl font-bold text-white">Крипто-Шахтер</p>
+                    <p id="profileUsername" class="text-lg text-gray-400">@TON_Miner_777</p>
+                </div>
+
+                <div class="space-y-4 pt-4 border-t border-gray-600">
+                    <div class="p-3 bg-gray-800 rounded-lg">
+                        <p class="text-sm uppercase text-gray-400">Ваш ID (для системы/переводов)</p>
+                        <p id="profileTelegramId" class="text-xl font-mono text-green-400 break-all mt-1">Загрузка...</p>
+                    </div>
+                    
+                    <div class="p-3 bg-gray-800 rounded-lg">
+                        <p class="text-sm uppercase text-gray-400">Текущий Хэшрейт Фермы</p>
+                        <p id="profileHashrate" class="text-xl font-bold text-blue-400 mt-1">0 MH/s</p>
+                    </div>
+
+                    <div class="p-3 bg-gray-800 rounded-lg">
+                        <p class="text-sm uppercase text-gray-400">Накоплено TON (Кошелек)</p>
+                        <p id="profileTonWallet" class="text-xl font-bold text-purple-400 mt-1">0.0000 TON</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- 1. MINING DASHBOARD SECTION -->
+        <!-- ========================================================================= -->
+        <div id="miningDashboard" class="p-4" style="display:none;">
+            <h2 class="text-4xl font-extrabold text-green-400 mb-6 border-b border-gray-700 pb-3">
+                Ферма - Панель Управления
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- Balance Card (USD) -->
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500">
+                    <p class="text-gray-400 text-sm uppercase">Текущий Баланс (USD)</p>
+                    <p id="currentBalance" class="text-4xl font-bold text-white mt-1">
+                        100 $
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">Баланс, доступный для покупок.</p>
+                </div>
+                
+                <!-- Hashrate Card -->
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
+                    <p class="text-gray-400 text-sm uppercase">Общая Мощность Фермы</p>
+                    <p id="totalHashrate" class="text-4xl font-bold text-white mt-1">
+                        0 MH/s
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">Мощность всех установленных видеокарт.</p>
+                </div>
+
+                <!-- TON Earned Card -->
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-purple-500">
+                    <p class="text-gray-400 text-sm uppercase">Накоплено TON (для сбора)</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <p id="pendingTonEarnedDisplay" class="text-4xl font-bold text-white">
+                            0.0000 TON
+                        </p>
+                        <button id="collectTonBtn" onclick="collectTon()" 
+                                class="px-3 py-1 bg-purple-600 text-white text-sm font-semibold rounded-full shadow-md transition duration-200 hover:bg-purple-700 disabled:opacity-50 min-w-[100px]"
+                                disabled>
+                            Собрать
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">После сбора TON будут в вашем кошельке.</p>
+                </div>
+                
+                <!-- TON Price Card -->
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-red-500">
+                    <p class="text-gray-400 text-sm uppercase">Цена TON</p>
+                    <p id="tonPrice" class="text-4xl font-bold text-white mt-1">
+                        15 $
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">Курс: 1 TON = 15 USD.</p>
+                </div>
+            </div>
+
+            <div class="mt-8 p-6 bg-gray-800 rounded-lg">
+                <h3 class="text-xl font-semibold text-gray-300 mb-4">Журнал Операций</h3>
+                <ul id="operationsLog" class="space-y-2 text-sm text-gray-400">
+                    <!-- Log entries will be added here -->
+                    <li>[00:00:00] Игра запущена.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- 2. PRODUCT SHOP SECTION -->
+        <!-- ========================================================================= -->
+        <div id="productShop" class="p-4" style="display:none;">
+            <h1 class="text-4xl font-extrabold text-gray-100 mb-4 text-center">
+                Видеокарты для Вашей Фермы
+            </h1>
+            <p class="text-center text-gray-400 mb-10">
+                Все карты в наличии в НЕОГРАНИЧЕННОМ количестве.
+            </p>
+
+            <!-- Product Grid Container -->
+            <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Cards will be injected here by JavaScript -->
+            </div>
+        </div>
+        <!-- End Product Shop Section -->
+
+        <!-- ========================================================================= -->
+        <!-- 3. BANK SECTION -->
+        <!-- ========================================================================= -->
+        <div id="bankSection" class="p-4" style="display:none;">
+            <h2 class="text-4xl font-extrabold text-yellow-400 mb-6 border-b border-gray-700 pb-3">
+                Банк "Крипто-Капитал"
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Deposit/Interest Card -->
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500 lg:col-span-2">
+                    <h3 class="text-2xl font-semibold text-white mb-4">Депозит "Выгодный" (Почасовой)</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-yellow-700">
+                            <span class="text-gray-300">Ваш Депозит:</span>
+                            <span id="depositBalanceDisplay" class="text-3xl font-bold text-yellow-400">0 $</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-green-700">
+                            <span class="text-gray-300">Действующая Ставка (в час):</span>
+                            <span id="effectiveInterestRateDisplay" class="text-3xl font-bold text-green-400">5.0%</span>
+                        </div>
+                        
+                        <p class="text-sm text-gray-400 mt-2">
+                            Внесение и снятие средств производится полностью. Ставка повышается покупкой улучшения.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 space-y-3">
+                        <!-- Deposit/Withdraw All Buttons -->
+                        <div class="flex space-x-4">
+                            <button onclick="depositAll()" class="w-1/2 py-2 bg-yellow-600 text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition">Внести Все</button>
+                            <button onclick="withdrawAll()" class="w-1/2 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition">Снять Все</button>
+                        </div>
+                        
+                        <h4 class="text-xl font-semibold text-gray-300 pt-4 border-t border-gray-600">Улучшение Ставки</h4>
+                        <!-- Upgrade Buttons - Text updated by JS on load -->
+                        <button id="upgradeStandardBtn" onclick="buyRateUpgrade(false)" class="w-full py-2 bg-green-700 text-white font-semibold rounded-lg hover:bg-green-600 transition">
+                            Улучшить Ставку: +1%
+                        </button>
+                        <button id="upgradeSpecialBtn" onclick="buyRateUpgrade(true)" class="w-full py-2 bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-600 transition">
+                            Специальное Улучшение: +100%
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Send Money Card -->
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
+                    <h3 class="text-2xl font-semibold text-white mb-4">Перевод Другу (Мок)</h3>
+                    <p class="text-sm text-gray-400 mb-4">Используйте Telegram ID или Username получателя (из его Профиля).</p>
+                    <div class="space-y-4">
+                         <label for="recipientIdInput" class="block text-sm font-medium text-gray-300">Telegram ID/Username Получателя:</label>
+                         <input type="text" id="recipientIdInput" placeholder="Telegram ID, Username (@user) или 28-значный ID" class="input-base w-full">
+                         
+                         <label for="transferAmountInput" class="block text-sm font-medium text-gray-300">Сумма Перевода ($):</label>
+                         <input type="number" id="transferAmountInput" placeholder="0" min="1" class="input-base w-full">
+                         
+                         <button onclick="sendMoneyToFriend()" class="w-full py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-500 transition">Отправить Средства</button>
+                    </div>
+                </div>
+            </div>
+
+            <p class="mt-8 text-sm text-gray-500 italic">
+                *Проценты начисляются в симуляции каждые 5 секунд. Перевод другу — это моковая функция, которая списывает деньги, но не гарантирует реального зачисления другому пользователю вне среды Canvas.
+            </p>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- 4. MARKET SECTION (NEW) -->
+        <!-- ========================================================================= -->
+        <div id="marketSection" class="p-4" style="display:none;">
+            <h2 class="text-4xl font-extrabold text-blue-400 mb-6 border-b border-gray-700 pb-3">
+                Рынок TON - Обмен на USD
+            </h2>
+
+            <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500 max-w-xl mx-auto">
+                <h3 class="text-2xl font-semibold text-white mb-4">Продать Ваши TON</h3>
+
+                <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-purple-700 mb-4">
+                    <span class="text-gray-300">TON в Кошельке (доступно для продажи):</span>
+                    <span id="marketTonBalanceDisplay" class="text-3xl font-bold text-purple-400">0.0000 TON</span>
+                </div>
+
+                <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg border border-red-700 mb-6">
+                    <span class="text-gray-300">Текущий Курс Обмена:</span>
+                    <span id="marketTonPriceDisplay" class="text-3xl font-bold text-red-400">15.00 $</span>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-lg font-medium text-gray-300">При продаже всего TON вы получите:</p>
+                    <p id="estimatedUsdGain" class="text-4xl font-extrabold text-green-400 mt-2">0.00 $</p>
+                </div>
+                
+                <button id="sellAllTonBtn" onclick="sellAllTon()" 
+                        class="w-full py-3 bg-blue-600 text-white text-xl font-bold rounded-lg hover:bg-blue-500 transition disabled:opacity-50"
+                        disabled>
+                    Продать ВСЕ TON
+                </button>
+
+                <p class="mt-4 text-sm text-gray-400 italic">
+                    Продажа происходит по фиксированному курсу. Средства будут немедленно зачислены на ваш USD баланс.
+                </p>
+            </div>
+        </div>
+
+
+        <!-- ========================================================================= -->
+        <!-- 5. WALLET SECTION -->
+        <!-- ========================================================================= -->
+        <div id="walletSection" class="p-4" style="display:none;">
+            <h2 class="text-4xl font-extrabold text-purple-400 mb-6 border-b border-gray-700 pb-3">
+                Общий Кошелек Активов
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- USD Total -->
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-yellow-500">
+                    <p class="text-gray-400 text-sm uppercase">Доступный Баланс (USD)</p>
+                    <p id="walletCurrentBalanceDisplay" class="text-5xl font-bold text-white mt-2">
+                        <!-- Balance will be updated here -->
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">Средства для покупок и депозитов.</p>
+                </div>
+
+                <!-- TON Wallet Balance -->
+                <div class="p-6 bg-gray-700 rounded-lg shadow-xl border-l-4 border-blue-500">
+                    <p class="text-gray-400 text-sm uppercase">TON в Кошельке (для продажи)</p>
+                    <p id="walletTonBalanceDisplay" class="text-5xl font-bold text-white mt-2">
+                         <!-- TON available for sale will be updated here -->
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">Продайте их на вкладке "Рынок TON".</p>
+                </div>
+                
+            </div>
+            
+        </div>
+
+
+        <!-- Confirmation Message Box (Single, for all actions) -->
+        <div id="messageBox" class="fixed bottom-4 right-4 p-4 text-sm rounded-lg transition duration-300 opacity-0 hidden z-50 shadow-2xl" role="alert">
+            <!-- Message content will be inserted here -->
+        </div>
+    </div>
+
+    <script type="module">
+        // --- FIREBASE IMPORTS ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // setLogLevel('Debug'); // Uncomment to see Firebase logs in console
+        
+        // --- GAME CONSTANTS ---
+        const currencyUnit = 'долларов ($)';
+        const miningCrypto = 'TON';
+        const cryptoPriceUsd = 15; // 1 TON = 15 USD
+
+        // Mining simulation parameters
+        const baseTonPerMHS = 0.0001; // TON earned per MH/s per second
+        const miningIntervalMs = 1000; // Update cycle every 1 second (1000ms)
+        
+        // Bank simulation parameters
+        const bankIntervalMs = 5000; // 5 seconds simulates 1 hour
+        const rateUpgradeCost = 1000; // $1,000 for +1%
+        const specialRateUpgradeCost = 130000; // $130,000 for +100%
+
+        // --- GLOBAL GAME STATE (Initial Values) ---
+        let gameState = {
+            balance: 100, // Starting balance 100 $ (Available funds)
+            totalHashrate: 0,
+            installedCardsCount: 0,
+            pendingTonEarned: 0, 
+            tonWalletBalance: 0, // TON collected and ready for sale
+            purchases: {},
+            depositBalance: 0, // Deposited money in the bank
+            purchasedInterestRate: 5, 
         };
 
-        // Настройка и Инициализация Firebase
-        async function initializeFirebase() {
-            try {
-                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-                const app = initializeApp(firebaseConfig);
-                window.firebase.db = getFirestore(app);
-                window.firebase.auth = getAuth(app);
+        // --- MOCK PROFILE DATA ---
+        const mockProfile = {
+            nickname: 'Крипто-Шахтер',
+            username: '@TON_Miner_777', // Моковое имя пользователя. Если нет, поставить null.
+            // Аватарка обрабатывается через CSS/HTML
+        };
+        
+        // --- FIREBASE GLOBALS ---
+        let db, auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        // --- INTERVAL GLOBALS ---
+        let bankInterval;
+        let miningInterval;
+
+
+        // --- FIREBASE CONFIG & PATHS (MANDATORY) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Firestore Paths (Private User Data)
+        const getGameStateRef = (uid) => {
+            return doc(db, 'artifacts', appId, 'users', uid, 'game_state', 'current');
+        };
+
+        // Function to handle exponential backoff for API calls (MANDATORY)
+        async function fetchWithRetry(apiCall, retries = 5, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    return await apiCall();
+                } catch (error) {
+                    console.error(`Firebase operation failed. Retrying in ${delay / 1000}s...`, error.message);
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Exponential backoff
+                }
+            }
+            // Should not be reached if retries > 0, but added for completeness
+            throw new Error("Failed to execute Firebase operation after multiple retries.");
+        }
+        
+        /**
+         * Centralized function to show transient success/error messages.
+         */
+        function showMessage(title, message, type = 'success') {
+            const messageBox = document.getElementById('messageBox');
+            
+            let classes = "fixed bottom-4 right-4 p-4 text-sm rounded-lg transition duration-300 opacity-100 z-50 shadow-2xl border ";
+            let bgColor, textColor, borderColor;
+
+            if (type === 'success') {
+                bgColor = 'bg-green-900';
+                textColor = 'text-green-300';
+                borderColor = 'border-green-700';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-900';
+                textColor = 'text-red-300';
+                borderColor = 'border-red-700';
+            } else if (type === 'info') {
+                bgColor = 'bg-purple-900';
+                textColor = 'text-purple-300';
+                borderColor = 'border-purple-700';
+            }
+            
+            messageBox.className = `${classes} ${bgColor} ${textColor} ${borderColor}`;
+            messageBox.innerHTML = `<strong>${title}:</strong> ${message}`;
+            messageBox.style.display = 'block';
+
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                messageBox.style.opacity = 0;
+                setTimeout(() => {
+                    messageBox.style.display = 'none';
+                }, 300);
+            }, 5000);
+        }
+
+        /**
+         * Formats a number for display.
+         */
+        function formatNumber(num, fixed = 2) {
+            const parsedNum = parseFloat(num);
+            if (isNaN(parsedNum)) return '0';
+            const multiplier = Math.pow(10, fixed);
+            const roundedNum = Math.round(parsedNum * multiplier) / multiplier;
+            
+            // Format to use spaces as thousands separators (Russian locale)
+            return new Intl.NumberFormat('ru-RU', {
+                minimumFractionDigits: fixed,
+                maximumFractionDigits: fixed
+            }).format(roundedNum);
+        }
+
+        /**
+         * Calculates the effective interest rate (now just returns the purchased rate).
+         */
+        function calculateInterestRate() {
+            // The rate is now determined only by purchases, not the deposit amount.
+            return gameState.purchasedInterestRate; 
+        }
+
+        /**
+         * Applies the calculated hourly interest to the deposit balance.
+         */
+        function applyBankInterest() {
+            if (gameState.depositBalance > 0 && isAuthReady) {
+                // 1. Calculate the rate
+                const hourlyRate = calculateInterestRate();
                 
-                // Аутентификация
-                const auth = window.firebase.auth;
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
+                // 2. Determine the time factor (5 seconds / 3600 seconds per hour)
+                const timeFactor = bankIntervalMs / (1000 * 3600); 
+
+                // 3. Calculate actual interest earned in this interval
+                const interestEarned = gameState.depositBalance * (hourlyRate / 100) * timeFactor;
+
+                // 4. Update the deposit balance
+                gameState.depositBalance += interestEarned;
+                
+                // 5. Update UI
+                updateDashboard();
+                
+                // 6. Log every 12 intervals (60 seconds)
+                if (Math.floor(Date.now() / bankIntervalMs) % 12 === 0) {
+                     logOperation(`БАНК: Доход ${interestEarned.toFixed(4)} $ (${hourlyRate.toFixed(1)}% в час).`);
+                }
+            }
+        }
+
+        /**
+         * Adds an entry to the operations log on the dashboard.
+         */
+        function logOperation(message) {
+            const logElement = document.getElementById('operationsLog');
+            if (!logElement) return;
+
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const newEntry = document.createElement('li');
+            newEntry.textContent = `[${timeString}] ${message}`;
+
+            // Add to the top of the list
+            logElement.prepend(newEntry);
+            
+            // Keep the log short (e.g., max 10 entries)
+            while (logElement.children.length > 10) {
+                logElement.removeChild(logElement.lastChild);
+            }
+        }
+
+        /**
+         * Updates the display of the Mining Dashboard and all other sections.
+         */
+        function updateDashboard() {
+            if (!isAuthReady) return; 
+            
+            const formattedBalance = formatNumber(gameState.balance);
+            const formattedDeposit = formatNumber(gameState.depositBalance);
+            const effectiveRate = calculateInterestRate(); 
+
+            // 1. Dashboard updates (Mining)
+            document.getElementById('currentBalance').textContent = formattedBalance + ' $';
+            document.getElementById('totalHashrate').textContent = formatNumber(gameState.totalHashrate, 0) + ' MH/s';
+            document.getElementById('tonPrice').textContent = cryptoPriceUsd + ' $';
+
+            // 2. TON Earnings
+            const pendingTon = gameState.pendingTonEarned;
+            document.getElementById('pendingTonEarnedDisplay').textContent = pendingTon.toFixed(4) + ` ${miningCrypto}`;
+            
+            // Toggle Collect Button state
+            const collectBtn = document.getElementById('collectTonBtn');
+            if (collectBtn) {
+                collectBtn.disabled = pendingTon < 0.0001; 
+                collectBtn.textContent = pendingTon > 0 ? `Собрать (${pendingTon.toFixed(4)} TON)` : `Собрать`;
+            }
+            
+            // 3. Bank updates
+            const depositDisplay = document.getElementById('depositBalanceDisplay');
+            const rateDisplay = document.getElementById('effectiveInterestRateDisplay');
+            if (depositDisplay) depositDisplay.textContent = formattedDeposit + ' $';
+            if (rateDisplay) rateDisplay.textContent = `${effectiveRate.toFixed(1)}%`;
+
+            // 4. Market updates
+            const currentTonBalance = gameState.tonWalletBalance;
+            const estimatedGain = currentTonBalance * cryptoPriceUsd;
+
+            const marketTonBalanceDisplay = document.getElementById('marketTonBalanceDisplay');
+            if (marketTonBalanceDisplay) marketTonBalanceDisplay.textContent = currentTonBalance.toFixed(4) + ` ${miningCrypto}`;
+
+            const marketTonPriceDisplay = document.getElementById('marketTonPriceDisplay');
+            if (marketTonPriceDisplay) marketTonPriceDisplay.textContent = cryptoPriceUsd.toFixed(2) + ' $';
+            
+            const estimatedUsdGain = document.getElementById('estimatedUsdGain');
+            if (estimatedUsdGain) estimatedUsdGain.textContent = formatNumber(estimatedGain, 2) + ' $';
+            
+            const sellAllTonBtn = document.getElementById('sellAllTonBtn');
+            if (sellAllTonBtn) sellAllTonBtn.disabled = currentTonBalance < 0.0001;
+
+
+            // 5. Wallet updates
+            const walletCurrentBalanceDisplay = document.getElementById('walletCurrentBalanceDisplay');
+            const walletTonBalanceDisplay = document.getElementById('walletTonBalanceDisplay');
+            
+            if (walletCurrentBalanceDisplay) walletCurrentBalanceDisplay.textContent = formattedBalance + ' $';
+            if (walletTonBalanceDisplay) walletTonBalanceDisplay.textContent = gameState.tonWalletBalance.toFixed(4) + ` ${miningCrypto}`;
+
+            // 6. User ID Display (Header)
+            const userIdDisplay = document.getElementById('currentUserId');
+            if (userIdDisplay && userId) {
+                 userIdDisplay.textContent = userId;
+            }
+
+            // 7. Profile updates
+            const profileTelegramId = document.getElementById('profileTelegramId');
+            const profileHashrate = document.getElementById('profileHashrate');
+            const profileTonWallet = document.getElementById('profileTonWallet');
+            const profileUsername = document.getElementById('profileUsername');
+
+            if (profileTelegramId && userId) profileTelegramId.textContent = userId;
+            if (profileHashrate) profileHashrate.textContent = formatNumber(gameState.totalHashrate, 0) + ' MH/s';
+            if (profileTonWallet) profileTonWallet.textContent = gameState.tonWalletBalance.toFixed(4) + ` ${miningCrypto}`;
+            
+            if (profileUsername) {
+                // Check if username is 'set' in mock data
+                if (mockProfile.username) {
+                    profileUsername.textContent = mockProfile.username;
+                    profileUsername.classList.remove('text-red-400');
+                    profileUsername.classList.add('text-gray-400');
                 } else {
+                    profileUsername.textContent = 'не задано';
+                    profileUsername.classList.remove('text-gray-400');
+                    profileUsername.classList.add('text-red-400');
+                }
+            }
+            const profileNickname = document.getElementById('profileNickname');
+            if (profileNickname) profileNickname.textContent = mockProfile.nickname;
+        }
+
+        /**
+         * Deposits all available cash into the bank.
+         */
+        window.depositAll = function() {
+            if (!isAuthReady) return;
+            if (gameState.balance <= 0) {
+                showMessage('ОШИБКА ДЕПОЗИТА', 'Нечего вносить. Ваш баланс равен 0 $.', 'error');
+                return;
+            }
+            
+            const amount = gameState.balance;
+            gameState.balance = 0;
+            gameState.depositBalance += amount;
+            
+            logOperation(`ДЕПОЗИТ: Внесено ВСЕ (${formatNumber(amount)} $) под ${calculateInterestRate().toFixed(1)}% в час.`);
+            showMessage('УСПЕХ', `Внесено ${formatNumber(amount)} $ на депозит.`, 'success');
+
+            updateDashboard();
+            saveGameState();
+        }
+
+        /**
+         * Withdraws all deposited money into the cash balance.
+         */
+        window.withdrawAll = function() {
+            if (!isAuthReady) return;
+            if (gameState.depositBalance <= 0) {
+                showMessage('ОШИБКА ВЫВОДА', 'На депозите нет средств для снятия.', 'error');
+                return;
+            }
+            
+            const amount = gameState.depositBalance;
+            gameState.depositBalance = 0;
+            gameState.balance += amount;
+            
+            logOperation(`ВЫВОД: Снято ВСЕ (${formatNumber(amount)} $) с депозита.`);
+            showMessage('УСПЕХ', `Выведено ${formatNumber(amount)} $ с депозита.`, 'success');
+
+            updateDashboard();
+            saveGameState();
+        }
+
+        /**
+         * Handles the purchase of interest rate upgrades.
+         */
+        window.buyRateUpgrade = function(isSpecial) {
+            if (!isAuthReady) return;
+            let cost, rateIncrease, upgradeName;
+
+            if (isSpecial) {
+                cost = specialRateUpgradeCost;
+                rateIncrease = 100;
+                upgradeName = 'Специальный (+100%)';
+            } else {
+                cost = rateUpgradeCost;
+                rateIncrease = 1;
+                upgradeName = 'Стандартный (+1%)';
+            }
+
+            if (gameState.balance < cost) {
+                showMessage('ОШИБКА ПОКУПКИ', `Недостаточно средств. Нужно ${formatNumber(cost)} $. Ваш баланс: ${formatNumber(gameState.balance)} $.`, 'error');
+                return;
+            }
+
+            gameState.balance -= cost;
+            gameState.purchasedInterestRate += rateIncrease;
+
+            logOperation(`УЛУЧШЕНИЕ: Куплен апгрейд "${upgradeName}" за ${formatNumber(cost)} $. Новая ставка: ${gameState.purchasedInterestRate.toFixed(1)}%`);
+            showMessage('УСПЕХ', `Ставка улучшена на +${rateIncrease}%. Текущая ставка: ${gameState.purchasedInterestRate.toFixed(1)}%`, 'success');
+            
+            updateDashboard();
+            saveGameState();
+        }
+
+        /**
+         * Handles the mock transfer of funds to another user ID.
+         */
+        window.sendMoneyToFriend = function() {
+            if (!isAuthReady) return;
+            const recipientIdInput = document.getElementById('recipientIdInput');
+            const transferAmountInput = document.getElementById('transferAmountInput');
+            
+            const recipientId = recipientIdInput.value.trim();
+            let amount = parseFloat(transferAmountInput.value);
+            
+            if (!recipientId || recipientId.length < 3) { // Minimal check for username or ID
+                showMessage('ОШИБКА ПЕРЕВОДА', 'Введите корректный Telegram ID или Username получателя.', 'error');
+                return;
+            }
+            
+            // Check if user is trying to send to self (using their numeric ID or mock username)
+            if (recipientId === userId || recipientId === mockProfile.username) {
+                showMessage('ОШИБКА ПЕРЕВОДА', 'Вы не можете отправить деньги самому себе.', 'error');
+                return;
+            }
+
+            if (isNaN(amount) || amount <= 0) {
+                showMessage('ОШИБКА ПЕРЕВОДА', 'Введите корректную сумму для перевода.', 'error');
+                return;
+            }
+            
+            amount = parseFloat(amount.toFixed(2));
+            
+            if (amount > gameState.balance) {
+                showMessage('ОШИБКА ПЕРЕВОДА', `Недостаточно средств. Ваш баланс: ${formatNumber(gameState.balance)} $`, 'error');
+                return;
+            }
+
+            // --- Mock Transfer Execution ---
+            gameState.balance -= amount;
+            
+            // Clear inputs
+            recipientIdInput.value = '';
+            transferAmountInput.value = '';
+            
+            // Determine recipient display name for log
+            const recipientDisplay = recipientId.startsWith('@') ? recipientId : recipientId.substring(0, 8) + '...';
+
+            // Log and UI update
+            logOperation(`ПЕРЕВОД: Отправлено ${formatNumber(amount)} $ пользователю ${recipientDisplay}`);
+            updateDashboard();
+            saveGameState();
+            showMessage('ПЕРЕВОД УСПЕШЕН', `Имитация отправки ${formatNumber(amount)} $ пользователю ${recipientDisplay}`, 'info');
+        }
+
+        /**
+         * Starts the continuous mining simulation loop and bank interest.
+         */
+        function startSimulation() {
+            logOperation(`Начат майнинг ${miningCrypto} по курсу ${cryptoPriceUsd} $.`);
+            logOperation(`Начат расчет банковских процентов (обновление каждые ${bankIntervalMs / 1000} сек).`);
+
+            // Start Mining Loop
+            miningInterval = setInterval(() => {
+                if (gameState.totalHashrate > 0) {
+                    const tonEarned = gameState.totalHashrate * baseTonPerMHS * (miningIntervalMs / 1000);
+                    gameState.pendingTonEarned += tonEarned; 
+
+                    // Log mining every 10 seconds (10 intervals)
+                    if (Math.floor(Date.now() / 1000) % 10 === 0) {
+                        logOperation(`Накоплено ~${(tonEarned * 10).toFixed(6)} TON за 10 сек.`);
+                    }
+                    updateDashboard();
+                }
+            }, miningIntervalMs);
+            
+            // Start Bank Interest Loop
+            bankInterval = setInterval(() => {
+                applyBankInterest();
+                // Save every time interest is applied to ensure deposit growth is saved
+                saveGameState(); 
+            }, bankIntervalMs); 
+        }
+
+        /**
+         * Collects pending TON earnings and moves them to the TON Wallet balance.
+         */
+        window.collectTon = function() {
+            if (!isAuthReady) return;
+            if (gameState.pendingTonEarned < 0.0001) {
+                showMessage('ПРЕДУПРЕЖДЕНИЕ', 'Нечего собирать.', 'info');
+                return; 
+            }
+            
+            const tonToCollect = gameState.pendingTonEarned;
+
+            gameState.tonWalletBalance += tonToCollect; // Add to TON wallet
+            gameState.pendingTonEarned = 0; 
+
+            logOperation(`СОБРАНО: ${tonToCollect.toFixed(4)} TON. Переведены в Кошелек TON.`);
+            updateDashboard();
+
+            saveGameState();
+            showMessage('СБОР УСПЕШЕН', `Успешно собрано ${tonToCollect.toFixed(4)} TON! Теперь они в Кошельке.`, 'info');
+        }
+
+        /**
+         * Sells all TON in the wallet for USD at the current fixed rate.
+         */
+        window.sellAllTon = function() {
+            if (!isAuthReady) return;
+            if (gameState.tonWalletBalance < 0.0001) {
+                showMessage('ОШИБКА ПРОДАЖИ', 'В вашем кошельке нет TON для продажи.', 'error');
+                return;
+            }
+
+            const tonToSell = gameState.tonWalletBalance;
+            const usdGain = tonToSell * cryptoPriceUsd;
+
+            gameState.balance += usdGain;
+            gameState.tonWalletBalance = 0;
+
+            logOperation(`ПРОДАЖА: Продано ${tonToSell.toFixed(4)} TON по курсу ${cryptoPriceUsd} $. Получено ${formatNumber(usdGain, 2)} $`);
+            updateDashboard();
+            saveGameState();
+            showMessage('ОБМЕН УСПЕШЕН', `Вы продали ${tonToSell.toFixed(4)} TON и получили ${formatNumber(usdGain, 2)} $!`, 'success');
+        }
+
+
+        /**
+         * Loads game state from Firestore and starts the periodic save.
+         */
+        async function loadGameState() {
+            if (!db || !userId) {
+                isAuthReady = true;
+                logOperation("Внимание: Firebase не инициализирован. Используется локальный/начальный баланс.");
+                updateDashboard();
+                return;
+            }
+            
+            try {
+                const docRef = getGameStateRef(userId);
+                const docSnap = await fetchWithRetry(() => getDoc(docRef));
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // Load and merge data from Firestore, ensuring all keys are present
+                    gameState = {
+                        balance: data.balance || 100,
+                        totalHashrate: data.totalHashrate || 0,
+                        installedCardsCount: data.installedCardsCount || 0,
+                        pendingTonEarned: data.pendingTonEarned || 0,
+                        tonWalletBalance: data.tonWalletBalance || 0, 
+                        purchases: data.purchases || {},
+                        depositBalance: data.depositBalance || 0, 
+                        purchasedInterestRate: data.purchasedInterestRate || 5, 
+                    };
+                    logOperation(`Состояние игры загружено из базы данных. Баланс: ${formatNumber(gameState.balance)} $`);
+                } else {
+                    await saveGameState(); 
+                    logOperation("Состояние игры инициализировано (новый игрок).");
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки состояния игры:", e);
+                logOperation(`ОШИБКА: Не удалось загрузить состояние игры (${e.message}). Использован локальный баланс.`);
+            }
+
+            isAuthReady = true;
+            updateDashboard();
+        }
+
+        /**
+         * Saves current game state to Firestore.
+         */
+        async function saveGameState() {
+            if (!db || !userId || !isAuthReady) return;
+
+            try {
+                const docRef = getGameStateRef(userId);
+                
+                const dataToSave = {
+                    balance: gameState.balance,
+                    totalHashrate: gameState.totalHashrate,
+                    installedCardsCount: gameState.installedCardsCount,
+                    pendingTonEarned: gameState.pendingTonEarned,
+                    tonWalletBalance: gameState.tonWalletBalance, 
+                    purchases: gameState.purchases,
+                    depositBalance: gameState.depositBalance, 
+                    purchasedInterestRate: gameState.purchasedInterestRate, 
+                };
+                
+                await fetchWithRetry(() => setDoc(docRef, dataToSave));
+                // console.log("Game state saved successfully.");
+            } catch (e) {
+                console.error("Ошибка сохранения состояния игры:", e);
+            }
+        }
+
+        /**
+         * Switches the visibility between the main sections.
+         */
+        window.showSection = function(sectionName) { 
+            const sections = {
+                'profile': document.getElementById('profileSection'),
+                'mining': document.getElementById('miningDashboard'),
+                'shop': document.getElementById('productShop'),
+                'bank': document.getElementById('bankSection'),
+                'market': document.getElementById('marketSection'), 
+                'wallet': document.getElementById('walletSection')
+            };
+
+            const navs = {
+                'profile': document.getElementById('navProfile'),
+                'mining': document.getElementById('navMining'),
+                'shop': document.getElementById('navShop'),
+                'bank': document.getElementById('navBank'),
+                'market': document.getElementById('navMarket'), 
+                'wallet': document.getElementById('navWallet')
+            };
+
+            for (const key in sections) {
+                if (sections[key]) { 
+                    sections[key].style.display = 'none';
+                }
+                if (navs[key]) { 
+                    navs[key].classList.remove('tab-active');
+                }
+            }
+
+            if (sections[sectionName]) {
+                sections[sectionName].style.display = 'block';
+                if (navs[sectionName]) {
+                    navs[sectionName].classList.add('tab-active');
+                }
+            }
+
+            updateDashboard();
+        }
+
+        // --- PRODUCT LOGIC (Mostly Unchanged) ---
+        const products = [
+            // Sorted by price in renderProducts()
+            { id: 10, name: 'RTX 5090 HASH', price: 85000, hashrate: 300, imageText: 'GPU 5090' },
+            { id: 11, name: 'RTX 4080 MAX', price: 60000, hashrate: 200, imageText: 'GPU 4080' },
+            { id: 12, name: 'RTX 4070 TURBO', price: 45000, hashrate: 150, imageText: 'GPU 4070' },
+            { id: 13, name: 'RTX 3090 TITAN', price: 70000, hashrate: 250, imageText: 'GPU 3090' },
+            { id: 14, name: 'RTX 3070 PRO', price: 35000, hashrate: 120, imageText: 'GPU 3070' },
+            { id: 15, name: 'RTX 3060 ECO', price: 28000, hashrate: 80, imageText: 'GPU 3060' },
+            { id: 16, name: 'Radeon RX 7900 X', price: 75000, hashrate: 280, imageText: 'AMD 7900' },
+            { id: 17, name: 'Radeon RX 6800 XT', price: 50000, hashrate: 180, imageText: 'AMD 6800' },
+            { id: 18, name: 'GTX 1080 Ti LEGEND', price: 25000, hashrate: 65, imageText: 'GTX 1080' },
+            { id: 19, name: 'GTX 1660 SUPER', price: 18000, hashrate: 40, imageText: 'GTX 1660' },
+            { id: 20, name: 'Radeon RX 580', price: 15000, hashrate: 30, imageText: 'AMD 580' },
+            { id: 21, name: 'Vega 64 LIQUID', price: 22000, hashrate: 55, imageText: 'AMD Vega' },
+            { id: 22, name: 'RTX 2060 SUPER', price: 30000, hashrate: 100, imageText: 'RTX 2060' },
+            { id: 23, name: 'GTX 1070', price: 19000, hashrate: 50, imageText: 'GTX 1070' },
+            { id: 24, name: 'Radeon R9 390', price: 12000, hashrate: 25, imageText: 'AMD R9' },
+            { id: 25, name: 'RTX A4000', price: 40000, hashrate: 130, imageText: 'RTX A4000' },
+            { id: 26, name: 'GTX 970 GAMING', price: 10000, hashrate: 20, imageText: 'GTX 970' },
+            { id: 27, name: 'RX 570 BASIC', price: 9000, hashrate: 18, imageText: 'RX 570' },
+            { id: 28, name: 'GTX 750 Ti MINI', price: 5000, hashrate: 10, imageText: 'GTX 750' },
+            { id: 29, name: 'GTX 660 HASH', price: 10, hashrate: 8, imageText: 'GTX 660' }, 
+            { id: 30, name: 'Intel Arc A770', price: 32000, hashrate: 110, imageText: 'INTEL A770' },
+            { id: 31, name: 'RTX 5050 MOBILE', price: 15000, hashrate: 50, imageText: 'RTX 5050' },
+            { id: 32, name: 'Radeon VII', price: 48000, hashrate: 160, imageText: 'AMD VII' },
+            { id: 33, name: 'Radeon RX 5700', price: 27000, hashrate: 90, imageText: 'RX 5700' },
+            { id: 34, name: 'ASIC Miner Pro V3', price: 150000, hashrate: 600, imageText: 'ASIC V3' },
+            { id: 35, name: 'Quantum Core GPU', price: 99999, hashrate: 450, imageText: 'Quantum' },
+            { id: 36, name: 'GTX 1060 6GB', price: 17000, hashrate: 35, imageText: 'GTX 1060' },
+            { id: 37, name: 'RTX 3080 VENTUS', price: 55000, hashrate: 190, imageText: 'RTX 3080' },
+            { id: 38, name: 'Radeon RX 6600', price: 24000, hashrate: 75, imageText: 'RX 6600' },
+            { id: 39, name: 'Tesla K80 SERVER', price: 38000, hashrate: 140, imageText: 'Tesla K80' }
+        ];
+
+        window.validateQuantity = function(inputElement, productId) {
+            let value = parseInt(inputElement.value);
+            if (isNaN(value) || value < 1) {
+                inputElement.value = 1;
+            } else {
+                if (value > 999999) {
+                     inputElement.value = 999999;
+                } else {
+                    inputElement.value = value;
+                }
+            }
+            updateTotal(productId);
+        }
+
+        window.changeQuantity = function(step, productId) {
+            const quantityInput = document.getElementById(`quantityInput-${productId}`);
+            let currentQuantity = parseInt(quantityInput.value);
+            let newQuantity = currentQuantity + step;
+            
+            if (newQuantity < 1) {
+                newQuantity = 1; 
+            }
+            if (newQuantity > 999999) {
+                newQuantity = 999999; 
+            }
+
+            quantityInput.value = newQuantity;
+            updateTotal(productId);
+        }
+
+        function updateTotal(productId) {
+            const product = products.find(p => p.id === productId);
+            const quantityInput = document.getElementById(`quantityInput-${productId}`);
+            const totalPriceElement = document.getElementById(`totalPrice-${productId}`);
+            
+            if (!product || !quantityInput || !totalPriceElement) return;
+
+            const quantity = parseInt(quantityInput.value) || 1;
+            const total = quantity * product.price;
+            
+            totalPriceElement.textContent = formatNumber(total, 2) + ' ' + currencyUnit;
+        }
+
+        window.addToCart = function(productId) {
+            if (!isAuthReady) {
+                 showMessage('ОШИБКА', 'Подождите, пока загрузится база данных.', 'error');
+                 return;
+            }
+            const product = products.find(p => p.id === productId);
+            const quantityInput = document.getElementById(`quantityInput-${productId}`);
+            
+            if (!product || !quantityInput) {
+                 showMessage('ОШИБКА', 'Продукт не найден.', 'error');
+                 return;
+            }
+
+            const quantity = parseInt(quantityInput.value) || 1;
+            const itemCost = quantity * product.price;
+
+            if (itemCost > gameState.balance) {
+                showMessage('ОШИБКА ПОКУПКИ', `Недостаточно средств. Вам не хватает ${formatNumber(itemCost - gameState.balance)} $`, 'error');
+                return;
+            }
+
+            gameState.balance -= itemCost;
+            gameState.totalHashrate += quantity * product.hashrate;
+            gameState.installedCardsCount += quantity;
+            
+            gameState.purchases[productId] = (gameState.purchases[productId] || 0) + quantity;
+
+            logOperation(`КУПЛЕНО: ${formatNumber(quantity)} x "${product.name}" за ${formatNumber(itemCost)} $. Хэшрейт: +${product.hashrate * quantity} MH/s.`);
+
+            quantityInput.value = 1;
+            updateTotal(productId);
+            updateDashboard(); 
+            
+            saveGameState(); 
+
+            const message = `Вы купили ${formatNumber(quantity)} видеокарт "${product.name}"! Всего потрачено: ${formatNumber(itemCost)} ${currencyUnit}.`;
+            showMessage('ПОКУПКА УСПЕШНА', message, 'success');
+        }
+
+        function renderProducts() {
+            products.sort((a, b) => a.price - b.price);
+
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = products.map(product => `
+                <div class="gpu-card p-4 rounded-lg shadow-lg border border-gray-700 flex flex-col justify-between">
+                    <div>
+                        <div class="aspect-video overflow-hidden rounded-md mb-3 bg-gray-900 flex justify-center items-center">
+                            <!-- Placeholder image for the GPU item -->
+                            <img src="https://placehold.co/600x300/3182ce/ffffff?text=${product.imageText}" 
+                                 alt="${product.name}" 
+                                 class="w-full h-full object-cover opacity-90">
+                        </div>
+                        
+                        <h3 class="text-xl font-bold text-gray-50 mb-1">ID ${product.id}: ${product.name}</h3>
+                        
+                        <div class="text-sm text-gray-400 mb-4 space-y-1">
+                            <p>Хэшрейт: <span class="font-semibold text-green-400">${product.hashrate} MH/s</span></p>
+                            <p>На Складе: <span class="text-blue-400 font-extrabold">НЕОГРАНИЧЕНО</span></p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 pt-3 border-t border-gray-700">
+                        <!-- Price -->
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-base text-gray-400">Цена за шт:</span>
+                            <span class="text-2xl font-bold text-green-400">${formatNumber(product.price, 0)} ${currencyUnit}</span>
+                        </div>
+
+                        <!-- Quantity Control -->
+                        <div class="flex items-center space-x-3">
+                            <label class="text-sm font-medium text-gray-300 flex-shrink-0">Кол-во:</label>
+                            <div class="flex items-stretch border border-gray-600 rounded-lg overflow-hidden flex-grow">
+                                <button onclick="changeQuantity(-1, ${product.id})" class="p-2 bg-gray-700 hover:bg-gray-600 transition text-gray-300 font-bold text-base w-8">-</button>
+                                <input type="number" id="quantityInput-${product.id}" value="1" min="1" oninput="validateQuantity(this, ${product.id})" 
+                                       class="quantity-input w-full text-center text-base font-semibold border-none focus:ring-0 p-1 bg-gray-800 text-white">
+                                <button onclick="changeQuantity(1, ${product.id})" class="p-2 bg-gray-700 hover:bg-gray-600 transition text-gray-300 font-bold text-base w-8">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Total Price -->
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-base text-gray-400">ИТОГО:</span>
+                            <p class="text-2xl font-extrabold text-red-500" id="totalPrice-${product.id}">${formatNumber(product.price, 2)} ${currencyUnit}</p>
+                        </div>
+
+                        <!-- Buy Button -->
+                        <button onclick="addToCart(${product.id})" 
+                                class="w-full py-2 button-primary text-black font-semibold rounded-lg shadow-md transition duration-200 hover:scale-[1.01] active:scale-[0.99]">
+                            КУПИТЬ И УСТАНОВИТЬ
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            products.forEach(p => updateTotal(p.id));
+        }
+        
+        /**
+         * Updates the text of the upgrade buttons with current costs.
+         */
+        function updateBankUpgradeButtons() {
+            const standardBtn = document.getElementById('upgradeStandardBtn');
+            const specialBtn = document.getElementById('upgradeSpecialBtn');
+
+            if (standardBtn) {
+                standardBtn.textContent = `Улучшить Ставку: +1% за ${formatNumber(rateUpgradeCost, 0)} $`;
+            }
+            if (specialBtn) {
+                specialBtn.textContent = `Специальное Улучшение: +100% за ${formatNumber(specialRateUpgradeCost, 0)} $`;
+            }
+        }
+
+        /**
+         * Initializes Firebase and authenticates the user.
+         */
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Check for initial auth token and sign in securely
+                if (initialAuthToken) {
+                    await setPersistence(auth, browserLocalPersistence);
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    // Fallback to anonymous sign-in if token is missing
+                    await setPersistence(auth, browserLocalPersistence);
                     await signInAnonymously(auth);
                 }
 
-                // Установка слушателя и получение userId
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        window.firebase.userId = user.uid;
-                        window.firebase.userIsReady = true;
-                        if (window.onFirebaseReady) {
-                            window.onFirebaseReady();
+                // Wait for auth state to resolve
+                await new Promise((resolve) => {
+                    const unsubscribe = onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            logOperation(`Пользователь авторизован (ID: ${userId.substring(0, 8)}...).`);
+                            unsubscribe();
+                            resolve();
+                        } else {
+                            logOperation("Ошибка авторизации. Запуск в гостевом режиме.");
+                            unsubscribe();
+                            resolve();
                         }
-                    } else if (!window.firebase.userIsReady) {
-                         // В случае выхода или ошибки (если не было готово), используем анонимный вход
-                         signInAnonymously(auth).then(result => {
-                             window.firebase.userId = result.user.uid;
-                             window.firebase.userIsReady = true;
-                             if (window.onFirebaseReady) {
-                                window.onFirebaseReady();
-                             }
-                         });
-                    }
+                    });
                 });
+                
+                await loadGameState();
+                startSimulation();
 
             } catch (error) {
-                console.error("FIREBASE FATAL ERROR (using local mode):", error);
-                // В случае фатальной ошибки, запускаем игру в локальном режиме
-                setTimeout(() => {
-                    window.firebase = { userId: 'local-test-user', userIsReady: true, appId: 'local', db: null, auth: null };
-                    if (window.onFirebaseReady) {
-                         window.onFirebaseReady();
-                    }
-                }, 100);
+                console.error("Ошибка инициализации или аутентификации Firebase:", error);
+                logOperation(`КРИТИЧЕСКАЯ ОШИБКА: Не удалось подключиться к базе данных. Прогресс НЕ будет сохранен.`);
+                isAuthReady = true; 
+                updateDashboard();
+                startSimulation();
             }
         }
-        
-        initializeFirebase();
+
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderProducts();
+            updateBankUpgradeButtons(); // Set button text on load
+            showSection('profile'); // Show profile by default 
+            await initFirebase(); 
+        });
     </script>
-    
-    <style>
-        /* Базовые стили для Glassmorphism (Стеклянный дизайн) */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0b0f19; /* Темный фон */
-            background-image: linear-gradient(135deg, #1c2738 0%, #0b0f19 100%);
-            color: #e5e7eb; /* Светлый текст */
-            min-height: 100vh;
-            transition: background 0.3s;
-            /* Скрываем скролл, если TWA не справляется */
-            overflow-x: hidden; 
-        }
-
-        /* Loading Overlay Style */
-        #loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #0b0f19;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-            opacity: 1;
-            transition: opacity 0.5s ease-in-out;
-        }
-
-        #loading-overlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        /* Spinner style (simple animation) */
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #0098EA;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.08); /* Светлая прозрачность */
-            border-radius: 18px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(12px); /* Эффект размытия */
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-        
-        .glass-card:hover {
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 50px rgba(0, 152, 234, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .ton-gradient {
-            background-image: linear-gradient(90deg, #0098EA, #00AEEF);
-        }
-        .ton-glow {
-            text-shadow: 0 0 12px rgba(0, 152, 234, 0.7);
-        }
-        
-        /* Стили для кнопок (iOS-подобная анимация) */
-        .glass-button {
-            border-radius: 12px;
-            padding: 14px 24px; /* Увеличенные тач-зоны */
-            font-weight: 600;
-            transition: transform 0.15s, box-shadow 0.15s, opacity 0.3s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            min-height: 48px; /* Гарантированный размер тач-зоны */
-        }
-
-        .glass-button:active {
-            transform: scale(0.96);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .glass-button:disabled {
-            opacity: 0.4;
-            transform: none;
-            cursor: not-allowed;
-        }
-
-        /* Стиль для активной вкладки */
-        .tab-button {
-            transition: all 0.2s;
-            border-bottom: 3px solid transparent;
-            color: #9ca3af;
-            padding: 16px 12px; /* Увеличенный вертикальный паддинг для тач-зоны */
-        }
-        .tab-button.active {
-            border-bottom: 3px solid #0098EA;
-            color: #0098EA;
-            font-weight: 600;
-        }
-        
-        /* Стили для поля ввода */
-        .glass-input {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            transition: border-color 0.3s;
-            min-height: 48px; /* Гарантированный размер тач-зоны */
-        }
-        .glass-input:focus {
-            outline: none;
-            border-color: #0098EA;
-        }
-
-        /* Стиль для плавающего меню */
-        .sticky-tabs {
-             background: rgba(11, 15, 25, 0.85); /* Более темный прозрачный фон для лучшего контраста */
-             backdrop-filter: blur(8px);
-             -webkit-backdrop-filter: blur(8px);
-             /* Мобильная прокрутка для большого количества вкладок */
-             white-space: nowrap; 
-             overflow-x: auto;
-             -webkit-overflow-scrolling: touch;
-        }
-        .sticky-tabs::-webkit-scrollbar {
-             display: none; /* Скрываем скроллбар на Android */
-        }
-
-    </style>
-</head>
-<body class="pb-20">
-
-<!-- ЭКРАН ЗАГРУЗКИ -->
-<div id="loading-overlay">
-    <div class="spinner mb-4"></div>
-    <p class="text-xl text-white ton-glow font-bold">Загрузка CryptoTycoon...</p>
-</div>
-
-<div id="app-container" class="max-w-xl mx-auto w-full p-4">
-
-    <!-- Заголовок и Баланс (Glass Card) -->
-    <header class="p-5 mb-6 glass-card shadow-2xl">
-        <h1 class="text-3xl font-bold text-white ton-glow">CryptoTycoon TON</h1>
-        <p class="text-sm mt-1 text-gray-400 opacity-80">ID: <span id="profile-id" class="text-xs font-mono">...</span></p>
-        
-        <div class="mt-4 flex flex-col sm:flex-row gap-3">
-            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10 min-w-0">
-                <span class="text-xs text-gray-400 block">Курс:</span>
-                <p class="text-xl font-bold text-yellow-300">$<span id="display-ton-price">15.00</span> / TON</p>
-            </div>
-            
-            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10 min-w-0">
-                <span class="text-xs text-gray-400">USD Баланс:</span>
-                <p class="text-xl font-bold text-green-300">$<span id="display-usd">0.00</span></p>
-            </div>
-            
-            <div class="bg-white/5 p-3 rounded-xl flex-1 font-mono border border-white/10 min-w-0">
-                <span class="text-xs text-gray-400">TON Баланс:</span>
-                <p class="text-xl font-bold text-white ton-glow"><span id="display-ton">0.0000</span> 💎</p>
-            </div>
-        </div>
-    </header>
-
-    <!-- Навигация по вкладкам (Стеклянная, прилипающая) -->
-    <div class="flex border-b border-white/10 mb-6 sticky top-0 z-10 sticky-tabs rounded-b-xl">
-        <button id="tab-farm" onclick="changeTab('farm')" class="tab-button flex-shrink-0 text-center active">⛏ Ферма</button>
-        <button id="tab-shop" onclick="changeTab('shop')" class="tab-button flex-shrink-0 text-center">🖥 Магазин</button>
-        <button id="tab-bank" onclick="changeTab('bank')" class="tab-button flex-shrink-0 text-center">🏦 Банк</button>
-        <button id="tab-wallet" onclick="changeTab('wallet')" class="tab-button flex-shrink-0 text-center">👛 Кошелек</button>
-        <button id="tab-nft" onclick="changeTab('nft')" class="tab-button flex-shrink-0 text-center">🖼 NFT</button>
-    </div>
-
-    <!-- КОНТЕНТ ВКЛАДОК -->
-    
-    <!-- 1. ФЕРМА (МАЙНИНГ) -->
-    <div id="content-farm" class="tab-content">
-        <section class="mb-8 p-4 glass-card">
-            <h2 class="text-2xl font-semibold mb-4 text-blue-300 flex justify-between items-center">
-                Пассивный Майнинг 
-                <span id="passive-rate" class="text-base text-gray-400">0.00 TON/мин</span>
-            </h2>
-            
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 p-4 glass-card !shadow-none !bg-white/5 border-white/10">
-                <span class="text-lg mb-2 sm:mb-0">Накоплено:</span>
-                <span id="pending-ton" class="text-2xl font-bold text-yellow-400 ton-glow">0.0000 TON</span>
-            </div>
-
-            <button onclick="collectPassiveIncome()" id="collect-button" class="w-full glass-button ton-gradient text-white disabled:opacity-50" disabled>
-                Собрать Накопления
-            </button>
-            
-            <div id="mining-feedback" class="mt-4 p-3 rounded-xl hidden text-center font-mono"></div>
-        </section>
-
-        <!-- Раздел Обмен и Курс -->
-        <section class="mt-8 p-4 glass-card">
-            <h2 class="text-2xl font-semibold mb-4 text-blue-300">💱 Обмен TON</h2>
-            <div class="bg-white/5 p-4 rounded-xl border border-white/10">
-                <p class="text-sm text-gray-400 mb-3">Обмен всего TON на USD по текущему курсу: $<span id="current-exchange-rate">15.00</span></p>
-                <button onclick="exchangeTonToUsd()" class="w-full glass-button bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-30" id="exchange-button">
-                    Обменять Весь TON
-                </button>
-            </div>
-        </section>
-    </div>
-    
-    <!-- 2. МАГАЗИН ОБОРУДОВАНИЯ -->
-    <div id="content-shop" class="tab-content hidden">
-        <h2 class="text-2xl font-semibold mb-4 text-blue-300">🖥 Доступные GPU (30 моделей)</h2>
-        <div id="shop-feedback" class="mb-4 p-3 rounded-xl hidden text-center font-mono"></div>
-        
-        <!-- Контейнер для динамического рендеринга 30 GPU -->
-        <div id="gpu-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <!-- Здесь будут сгенерированы 30 карточек GPU -->
-        </div>
-
-        <!-- ASIC (Дополнение) -->
-        <h2 class="text-2xl font-semibold mt-8 mb-4 text-blue-300">ASIC-майнеры</h2>
-        <div class="glass-card p-4 flex flex-col sm:flex-row items-center justify-between">
-            <div class="mb-3 sm:mb-0">
-                <p class="text-xl font-semibold text-white">ASIC-майнер X-30</p>
-                <p class="text-sm text-gray-400">Доход: +0.25 TON/мин</p>
-                <p class="text-sm text-gray-400">В наличии: <span id="asic-count">0</span></p>
-            </div>
-            <div class="text-right w-full sm:w-auto">
-                <p class="text-green-400 font-bold text-2xl">500 $</p>
-                <button onclick="buyEquipment('asic', 500, 0.25)" id="buy-asic-button" class="glass-button ton-gradient text-white text-sm mt-2 disabled:opacity-30">
-                    Купить
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- 3. БАНК (ДЕПОЗИТЫ) -->
-    <div id="content-bank" class="tab-content hidden">
-        <h2 class="text-2xl font-semibold mb-4 text-blue-300">🏦 Межпланетарный Банк</h2>
-        <div id="bank-feedback" class="mb-4 p-3 rounded-xl hidden text-center font-mono"></div>
-
-        <div class="p-4 glass-card mb-6">
-            <p class="text-xl font-mono text-green-300 mb-3 border-b border-white/10 pb-3">Ваш USD-баланс: <span id="bank-usd-balance">0.00</span> $</p>
-            
-            <h3 class="text-lg font-semibold text-white mb-2 mt-3">--- Депозит ---</h3>
-            <p class="text-sm text-gray-400">Сумма на вкладе: <span id="bank-deposit-amount" class="text-yellow-400 font-mono">0.0000</span> $</p>
-            <p class="text-sm text-gray-400">Общая Ставка: <span id="bank-interest-rate" class="text-cyan-400 font-bold">5.00%</span> в час</p>
-            <p class="text-sm text-gray-400 mb-3">Накопленные %: +<span id="bank-accumulated-interest" class="text-green-400 font-mono">0.0000</span> $</p>
-            
-            <div class="grid grid-cols-2 gap-3 mt-4">
-                <button onclick="bankDeposit(100)" id="deposit-100-btn" class="glass-button bg-green-700/80 hover:bg-green-700 text-white text-sm disabled:opacity-30 !py-3">
-                    Внести 100 $
-                </button>
-                <button onclick="bankWithdraw(100)" id="withdraw-100-btn" class="glass-button bg-red-700/80 hover:bg-red-700 text-white text-sm disabled:opacity-30 !py-3">
-                    Снять 100 $
-                </button>
-                <button onclick="bankDeposit('all')" id="deposit-all-btn" class="glass-button bg-green-900/80 hover:bg-green-900 text-white text-sm disabled:opacity-30 !py-3">
-                    Внести Все
-                </button>
-                <button onclick="bankWithdraw('all')" id="withdraw-all-btn" class="glass-button bg-red-900/80 hover:bg-red-900 text-white text-sm disabled:opacity-30 !py-3">
-                    Снять Все
-                </button>
-            </div>
-        </div>
-        
-        <!-- Улучшение Процентов -->
-        <div class="p-4 glass-card border border-cyan-500/50">
-            <h3 class="text-xl font-semibold mb-2 text-cyan-400">📈 Улучшение Процентов</h3>
-            <p class="text-sm text-gray-400 mb-3">Улучшить ставку на **+2.00%** за **500 $** (Текущая: <span id="current-interest-rate-upgrade">5.00</span>%)</p>
-            <button onclick="upgradeInterest()" id="upgrade-interest-btn" class="w-full glass-button bg-cyan-600/80 hover:bg-cyan-600 text-white disabled:opacity-30">
-                Улучшить (+2.00%)
-            </button>
-        </div>
-    </div>
-
-    <!-- 4. КОШЕЛЕК (ПЕРЕВОДЫ) -->
-    <div id="content-wallet" class="tab-content hidden">
-        <h2 class="text-2xl font-semibold mb-4 text-blue-300">👛 Кошелек</h2>
-        <div id="wallet-feedback" class="mb-4 p-3 rounded-xl hidden text-center font-mono"></div>
-
-        <div class="p-4 glass-card mb-6">
-            <p class="text-xl font-mono text-green-300 mb-4 border-b border-white/10 pb-3">Ваш USD-баланс: <span id="wallet-usd-balance">0.00</span> $</p>
-
-            <h3 class="text-lg font-semibold text-white mb-2">Отправить деньги другу</h3>
-            <p class="text-sm text-yellow-400 mb-3">
-                *Внимание: эта функция симулирована для однопользовательской среды.
-            </p>
-            
-            <input type="text" id="recipient-id" placeholder="ID получателя (UserID)" class="w-full p-3 mb-2 glass-input rounded-lg text-white placeholder-gray-400">
-            <input type="number" id="transfer-amount" placeholder="Сумма в USD" class="w-full p-3 mb-4 glass-input rounded-lg text-white placeholder-gray-400" min="0.01" step="0.01">
-            
-            <button onclick="sendMoney()" id="send-money-btn" class="w-full glass-button ton-gradient text-white disabled:opacity-30">
-                Отправить
-            </button>
-        </div>
-
-        <div class="p-4 glass-card">
-            <h3 class="text-lg font-semibold text-white mb-2">Ваш ID для получения</h3>
-            <div class="flex items-center bg-white/5 p-3 rounded-xl border border-white/10">
-                <span id="wallet-user-id" class="flex-grow font-mono text-sm break-all">...</span>
-                <button onclick="copyUserId()" class="ml-3 px-3 py-1 glass-button bg-gray-600/80 hover:bg-gray-600 text-white text-xs">
-                    Копировать
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 5. NFT -->
-    <div id="content-nft" class="tab-content hidden">
-        <h2 class="text-2xl font-semibold mb-4 text-blue-300">🖼 NFT Маркетплейс</h2>
-        <div id="nft-feedback" class="mb-4 p-3 rounded-xl hidden text-center font-mono"></div>
-
-        <!-- YOUTUBE NFT Распродажа (Лимитированное издание) -->
-        <div class="glass-card p-4 mb-6 border border-yellow-500/50">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
-                <p class="text-xl font-semibold text-white flex items-center mb-2 sm:mb-0">
-                    <!-- SVG-логотип YouTube -->
-                    <svg class="mr-2 w-6 h-6 text-red-600 fill-current" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M19.61 6.31C19.1 5.76 18.42 5.37 17.65 5.16C15.82 4.67 12 4.67 12 4.67C12 4.67 8.18 4.67 6.35 5.16C5.58 5.37 4.9 5.76 4.39 6.31C3.84 6.89 3.52 7.57 3.39 8.35C3.12 10.05 3.12 12 3.12 12C3.12 12 3.12 13.95 3.39 15.65C3.52 16.43 3.84 17.11 4.39 17.69C4.9 18.24 5.58 18.63 6.35 18.84C8.18 19.33 12 19.33 12 19.33C12 19.33 15.82 19.33 17.65 18.84C18.42 18.63 19.1 18.24 19.61 17.69C20.16 17.11 20.48 16.43 20.61 15.65C20.88 13.95 20.88 12 20.88 12C20.88 12 20.88 10.05 20.61 8.35C20.48 7.57 20.16 6.89 19.61 6.31ZM10.5 15.3V8.7L15.6 12L10.5 15.3Z" fill="currentColor"/>
-                    </svg>
-                    YouTube NFT (Лимитированное издание)
-                </p>
-                <p class="text-2xl font-bold text-yellow-400">100,000 $</p>
-            </div>
-            <p class="text-sm text-gray-400 mb-3">
-                Всего в мире: 3 шт. Доход: +100.00 TON/мин за штуку.
-            </p>
-            <div class="flex justify-between items-center text-sm text-gray-300 mb-4">
-                <span>В наличии: <span id="youtube-nft-stock">3</span> / 3</span>
-                <span>Ваша коллекция: <span id="youtube-nft-owned">0</span></span>
-            </div>
-            <button onclick="buyYoutubeNft()" id="buy-youtube-nft-button" class="w-full glass-button bg-yellow-600/80 hover:bg-yellow-600 text-gray-900 font-bold disabled:opacity-30">
-                Купить NFT
-            </button>
-        </div>
-
-        <!-- Покупка NFT Бокса -->
-        <div class="glass-card p-4 mb-6 border border-purple-500/50">
-            <div class="flex justify-between items-center mb-4">
-                <p class="text-xl font-semibold text-white">Mystery Box</p>
-                <p class="text-2xl font-bold text-purple-400">100 $</p>
-            </div>
-            <p class="text-sm text-gray-400 mb-4">
-                Шанс получить NFT: Редкий (+0.5 TON/мин) или Легендарный (+2.0 TON/мин)
-            </p>
-            <button onclick="buyNFTBox()" class="w-full glass-button bg-purple-600/80 hover:bg-purple-600 text-white disabled:opacity-30" id="buy-nft-button">
-                Открыть Бокс
-            </button>
-        </div>
-
-        <h3 class="text-xl font-semibold mt-8 mb-3 text-white">Ваша Коллекция</h3>
-        <div id="user-nft-collection" class="grid grid-cols-2 gap-4">
-            <div id="nft-rare-display" class="glass-card p-3 text-center !bg-white/5">
-                <p class="text-2xl">⭐</p>
-                <p class="font-semibold text-sm">Редких:</p>
-                <p class="text-lg font-bold" id="nft-rare-count">0</p>
-            </div>
-            <div id="nft-legendary-display" class="glass-card p-3 text-center !bg-white/5">
-                <p class="text-2xl">👑</p>
-                <p class="font-semibold text-sm">Легендарных:</p>
-                <p class="text-lg font-bold" id="nft-legendary-count">0</p>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Модальное окно (для сообщений) -->
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden z-50" onclick="closeModal()">
-        <div class="glass-card p-6 max-w-sm w-full" onclick="event.stopPropagation()">
-            <h3 id="modal-title" class="text-xl font-bold mb-3 text-blue-300"></h3>
-            <p id="modal-message" class="text-gray-200 mb-4"></p>
-            <button onclick="closeModal()" class="w-full glass-button ton-gradient text-white">Закрыть</button>
-        </div>
-    </div>
-
-</div>
-
-<script>
-    // --- 0. КОНСТАНТЫ И НАСТРОЙКИ ---
-    const WebApp = Telegram.WebApp;
-    
-    const UPDATE_INTERVAL_MS = 5000; // Интервал обновления UI (5 секунд)
-    const MIN_USD_ACTION = 0.01;
-    const YOUTUBE_NFT_LIMIT = 3; 
-    const YOUTUBE_NFT_PRICE = 100000; 
-    const YOUTUBE_NFT_RATE_INCREASE = 100.00; 
-
-    // 30 РАЗНЫХ МОДЕЛЕЙ GPU
-    const GPUS = [
-        // Низкий уровень
-        { id: 'gpu_01', name: 'NVIDIA 1060', price: 10, rate: 0.01, icon: '⚡' },
-        { id: 'gpu_02', name: 'AMD RX 580', price: 15, rate: 0.015, icon: '🔥' },
-        { id: 'gpu_03', name: 'GTX 1660 Ti', price: 20, rate: 0.02, icon: '✨' },
-        { id: 'gpu_04', name: 'RTX 2060', price: 35, rate: 0.035, icon: '💨' },
-        { id: 'gpu_05', name: 'Radeon 5700 XT', price: 50, rate: 0.05, icon: '☄️' },
-        { id: 'gpu_06', name: 'RTX 3050', price: 60, rate: 0.06, icon: '⭐' },
-        { id: 'gpu_07', name: 'Arc A380', price: 70, rate: 0.07, icon: '💡' },
-        { id: 'gpu_08', name: 'GTX 1080 Ti', price: 90, rate: 0.09, icon: '🌟' },
-        { id: 'gpu_09', name: 'RTX 3060', price: 120, rate: 0.12, icon: '🚀' },
-        { id: 'gpu_10', name: 'Radeon 6600 XT', price: 140, rate: 0.14, icon: '💥' },
-        
-        // Средний уровень
-        { id: 'gpu_11', name: 'RTX 3070', price: 200, rate: 0.20, icon: '🌌' },
-        { id: 'gpu_12', name: 'Radeon 6700 XT', price: 220, rate: 0.22, icon: '🌠' },
-        { id: 'gpu_13', name: 'RTX 3070 Ti', price: 250, rate: 0.25, icon: '🚁' },
-        { id: 'gpu_14', name: 'Radeon 6800', price: 280, rate: 0.28, icon: '🛰️' },
-        { id: 'gpu_15', name: 'RTX 3080', price: 350, rate: 0.35, icon: '💎' },
-        { id: 'gpu_16', name: 'Radeon 6800 XT', price: 380, rate: 0.38, icon: '🔮' },
-        { id: 'gpu_17', name: 'RTX 4060', price: 400, rate: 0.40, icon: '👑' },
-        { id: 'gpu_18', name: 'Radeon 7600 XT', price: 420, rate: 0.42, icon: '🔱' },
-        { id: 'gpu_19', name: 'RTX 4070', price: 550, rate: 0.55, icon: '⚜️' },
-        { id: 'gpu_20', name: 'Radeon 7800 XT', price: 600, rate: 0.60, icon: '🌀' },
-
-        // Высокий уровень
-        { id: 'gpu_21', name: 'RTX 3090', price: 700, rate: 0.70, icon: '⚙️' },
-        { id: 'gpu_22', name: 'Radeon 7900 XT', price: 800, rate: 0.80, icon: '🧱' },
-        { id: 'gpu_23', name: 'RTX 4080', price: 1000, rate: 1.00, icon: '🔋' },
-        { id: 'gpu_24', name: 'Radeon 7900 XTX', price: 1100, rate: 1.10, icon: '🌡️' },
-        { id: 'gpu_25', name: 'RTX 4090', price: 1500, rate: 1.50, icon: '☢️' },
-        { id: 'gpu_26', name: 'Tesla V100', price: 2000, rate: 2.00, icon: '🛰' },
-        { id: 'gpu_27', name: 'H100 HPC', price: 3000, rate: 3.00, icon: '🧬' },
-        { id: 'gpu_28', name: 'Jupiter SuperCore', price: 5000, rate: 5.00, icon: '🪐' },
-        { id: 'gpu_29', name: 'Mars Core X', price: 7500, rate: 7.50, icon: '👽' },
-        { id: 'gpu_30', name: 'Quantum Core Z', price: 10000, rate: 10.00, icon: '♾️' },
-    ];
-    
-    // Начальное состояние игры
-    const initialGameState = {
-        usd: 100.00, // Начальный капитал 100 USD
-        ton: 0.0000,
-        asicCount: 0,
-        nftRareCount: 0,
-        nftLegendaryCount: 0,
-        youtubeNftOwned: 0, 
-        
-        // Объект для хранения количества каждой купленной GPU (id: count)
-        gpuOwned: {}, 
-        
-        miningRatePerMin: 0.00, 
-        inGameTonPrice: 15.00,
-        lastActiveTime: Date.now(),
-        
-        // Состояние Банка
-        depositAmount: 0.00,
-        bankInterestRate: 5.00, 
-        lastInterestCalculationTime: Date.now(),
-        accumulatedInterest: 0.00, 
-    };
-
-    let gameState = null;
-    let pendingPassiveTon = 0; 
-    let currentTab = 'farm';
-
-    // --- 1. ФУНКЦИИ FIREBASE (CRUD) ---
-
-    function getUserDocRef(userId) {
-        if (!window.firebase.db) return null;
-        // Путь: /artifacts/{appId}/users/{userId}/gameData/state
-        const firestore = window.firebase.db;
-        const appId = window.firebase.appId;
-        const userPath = `artifacts/${appId}/users/${userId}/gameData/state`;
-        return doc(firestore, userPath);
-    }
-
-    // Функция для пересчета общей ставки майнинга
-    function calculateTotalMiningRate() {
-        let totalRate = 0;
-
-        // 1. ASICs
-        totalRate += gameState.asicCount * 0.25;
-
-        // 2. NFTs
-        totalRate += gameState.nftRareCount * 0.50;
-        totalRate += gameState.nftLegendaryCount * 2.00;
-        totalRate += gameState.youtubeNftOwned * YOUTUBE_NFT_RATE_INCREASE;
-
-        // 3. GPUs (Итерация по всем купленным моделям)
-        for (const gpuId in gameState.gpuOwned) {
-            const count = gameState.gpuOwned[gpuId];
-            if (count > 0) {
-                const gpuInfo = GPUS.find(g => g.id === gpuId);
-                if (gpuInfo) {
-                    totalRate += count * gpuInfo.rate;
-                }
-            }
-        }
-        
-        // Ограничиваем точность
-        gameState.miningRatePerMin = parseFloat(totalRate.toFixed(4));
-    }
-
-
-    async function saveState() {
-        if (!window.firebase.userIsReady || !gameState || !window.firebase.db) return;
-        
-        try {
-            // Обновляем ставку перед сохранением
-            calculateTotalMiningRate(); 
-            // Обновляем время активности перед сохранением
-            gameState.lastActiveTime = Date.now();
-            
-            const userRef = getUserDocRef(window.firebase.userId);
-            
-            // Клонируем состояние, чтобы избежать ошибок с плавающей запятой в Firestore
-            const stateToSave = { ...gameState };
-            stateToSave.ton = parseFloat(stateToSave.ton.toFixed(8)); 
-            stateToSave.usd = parseFloat(stateToSave.usd.toFixed(4)); 
-            stateToSave.depositAmount = parseFloat(stateToSave.depositAmount.toFixed(4));
-            stateToSave.accumulatedInterest = parseFloat(stateToSave.accumulatedInterest.toFixed(8));
-            
-            await setDoc(userRef, stateToSave, { merge: true });
-        } catch (e) {
-            console.error("FIREBASE SAVE ERROR:", e);
-        }
-    }
-
-    // Загрузка состояния и подписка на обновления
-    function loadAndSubscribeToState() {
-        if (!window.firebase.userIsReady || !window.firebase.db) {
-             console.warn("Firebase not ready or db not initialized for subscription.");
-             return;
-        }
-        
-        const userRef = getUserDocRef(window.firebase.userId);
-        
-        // onSnapshot - слушатель, который обновляет UI в реальном времени
-        onSnapshot(userRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const loadedState = docSnap.data();
-                // При загрузке совмещаем с начальным состоянием, чтобы добавить новые поля
-                gameState = { ...initialGameState, ...loadedState }; 
-            } else {
-                // Новый игрок, создаем новое состояние
-                gameState = { ...initialGameState };
-            }
-            
-            // Пересчитываем ставку после загрузки (важно для старых сохраненных данных)
-            calculateTotalMiningRate(); 
-            updateGameMetrics(true); // Обновляем UI и рассчитываем пассивный доход/проценты
-            updateUI();
-        }, (error) => {
-            console.error("FIREBASE LISTEN ERROR:", error);
-            // Если ошибка, используем начальное состояние
-            gameState = { ...initialGameState };
-            calculateTotalMiningRate();
-            updateUI();
-        });
-    }
-
-    // --- 2. ЛОГИКА ПАССИВНОГО ДОХОДА, ПРОЦЕНТОВ И СБОРА ---
-    
-    function updateGameMetrics(isInitialLoad = false) {
-        if (!gameState) return;
-
-        const now = Date.now();
-        
-        // --- Расчет Майнинга TON ---
-        const lastActive = gameState.lastActiveTime || now; 
-        const diffMsMining = now - lastActive;
-        const diffMinutes = diffMsMining / (1000 * 60);
-
-        const earnedTon = diffMinutes * gameState.miningRatePerMin;
-        
-        // --- Расчет Банковских Процентов ---
-        const lastInterestTime = gameState.lastInterestCalculationTime || now;
-        const diffMsInterest = now - lastInterestTime;
-        const diffHours = diffMsInterest / (1000 * 60 * 60);
-
-        let interestEarned = 0;
-        // Начисляем проценты только если прошел ощутимый период и есть депозит
-        if (gameState.depositAmount > 0 && diffHours >= 0.0001) { 
-            const hourlyRate = gameState.bankInterestRate / 100;
-            interestEarned = gameState.depositAmount * hourlyRate * diffHours;
-            gameState.accumulatedInterest += interestEarned;
-            // Обновляем время последней калькуляции, чтобы избежать повторного начисления
-            gameState.lastInterestCalculationTime = now; 
-        }
-
-        if (isInitialLoad) {
-            // При первой загрузке добавляем весь накопленный доход
-            pendingPassiveTon = earnedTon;
-            gameState.lastActiveTime = now;
-        } else {
-            // Регулярное обновление: просто обновляем временные счетчики
-            pendingPassiveTon += earnedTon;
-            gameState.lastActiveTime = now; // Обновляем для корректного расчета в следующий раз
-        }
-
-        updateUI();
-    }
-    
-    function collectPassiveIncome() {
-        const collectedTon = pendingPassiveTon;
-        const collectedInterest = gameState.accumulatedInterest;
-        let feedbackMessage = "";
-        let collectedSomething = false;
-
-        // Collect TON
-        if (collectedTon >= 0.0001) {
-            gameState.ton += collectedTon;
-            pendingPassiveTon = 0;
-            feedbackMessage += `💰 +${collectedTon.toFixed(4)} TON собрано. `;
-            collectedSomething = true;
-        }
-        
-        // Collect Interest (add to deposit and reset accumulated)
-        if (collectedInterest >= 0.0001) {
-            // При сборе процентов, они добавляются к основному депозиту
-            gameState.depositAmount += collectedInterest;
-            gameState.accumulatedInterest = 0.00;
-            feedbackMessage += `💸 +${collectedInterest.toFixed(4)} $ процентов зачислено на вклад. `;
-            collectedSomething = true;
-        }
-        
-        if (!collectedSomething) {
-             showModal("Сбор дохода", "❌ Нет накопленного дохода (ни TON, ни процентов).");
-             return;
-        }
-
-        saveState();
-        updateUI();
-        
-        // Обратная связь
-        const feedback = document.getElementById('mining-feedback');
-        feedback.textContent = feedbackMessage.trim();
-        feedback.classList.remove('hidden', 'bg-red-900/50', 'text-red-300');
-        feedback.classList.add('bg-green-900/50', 'text-green-300');
-        setTimeout(() => feedback.classList.add('hidden'), 5000);
-    }
-
-    // --- 3. ЛОГИКА БАНКА, КОШЕЛЬКА И ОБМЕНА ---
-
-    function bankDeposit(amount) {
-        const bankFeedback = document.getElementById('bank-feedback');
-        bankFeedback.classList.add('hidden');
-        
-        let depositAmount = amount === 'all' ? gameState.usd : amount;
-        depositAmount = parseFloat(depositAmount.toFixed(4));
-
-        if (depositAmount < MIN_USD_ACTION || gameState.usd < depositAmount) {
-            showFeedback(bankFeedback, `❌ Недостаточно USD или сумма слишком мала (мин. ${MIN_USD_ACTION} $).`, 'error');
-            return;
-        }
-        
-        gameState.usd -= depositAmount;
-        gameState.depositAmount += depositAmount;
-        
-        saveState();
-        updateUI();
-        showFeedback(bankFeedback, `✅ ${depositAmount.toFixed(2)} $ успешно внесены на вклад.`, 'success');
-    }
-
-    function bankWithdraw(amount) {
-        const bankFeedback = document.getElementById('bank-feedback');
-        bankFeedback.classList.add('hidden');
-        
-        let withdrawAmount = amount === 'all' ? gameState.depositAmount : amount;
-        withdrawAmount = parseFloat(withdrawAmount.toFixed(4));
-        
-        if (withdrawAmount < MIN_USD_ACTION || gameState.depositAmount < withdrawAmount) {
-            showFeedback(bankFeedback, `❌ Недостаточно средств на вкладе или сумма слишком мала (мин. ${MIN_USD_ACTION} $).`, 'error');
-            return;
-        }
-        
-        gameState.depositAmount -= withdrawAmount;
-        gameState.usd += withdrawAmount;
-
-        saveState();
-        updateUI();
-        showFeedback(bankFeedback, `✅ ${withdrawAmount.toFixed(2)} $ успешно сняты со вклада.`, 'success');
-    }
-    
-    function upgradeInterest() {
-        const bankFeedback = document.getElementById('bank-feedback');
-        bankFeedback.classList.add('hidden');
-        const upgradeCost = 500;
-        const rateIncrease = 2.00;
-
-        if (gameState.usd < upgradeCost) {
-            showFeedback(bankFeedback, `❌ Недостаточно USD. Стоимость улучшения: ${upgradeCost} $.`, 'error');
-            return;
-        }
-        
-        gameState.usd -= upgradeCost;
-        gameState.bankInterestRate += rateIncrease;
-        
-        saveState();
-        updateUI();
-        showFeedback(bankFeedback, `🚀 Проценты улучшены! Теперь ставка: ${gameState.bankInterestRate.toFixed(2)}% в час.`, 'success');
-    }
-    
-    function sendMoney() {
-        const walletFeedback = document.getElementById('wallet-feedback');
-        walletFeedback.classList.add('hidden');
-        
-        const recipientId = document.getElementById('recipient-id').value.trim();
-        const amountInput = document.getElementById('transfer-amount').value;
-        const amount = parseFloat(amountInput);
-
-        if (!recipientId) {
-            showFeedback(walletFeedback, "❌ Введите ID получателя.", 'error');
-            return;
-        }
-        
-        if (isNaN(amount) || amount < MIN_USD_ACTION) {
-            showFeedback(walletFeedback, `❌ Введите корректную сумму (мин. ${MIN_USD_ACTION} $).`, 'error');
-            return;
-        }
-
-        if (amount > gameState.usd) {
-            showFeedback(walletFeedback, "❌ Недостаточно средств на USD-балансе.", 'error');
-            return;
-        }
-        
-        if (recipientId === window.firebase.userId) {
-            showFeedback(walletFeedback, "❌ Нельзя отправить деньги самому себе!", 'error');
-            return;
-        }
-
-        // --- СИМУЛЯЦИЯ ПЕРЕВОДА ---
-        gameState.usd -= amount;
-        
-        document.getElementById('recipient-id').value = '';
-        document.getElementById('transfer-amount').value = '';
-
-        saveState();
-        updateUI();
-        showModal("Перевод успешен", `✅ ${amount.toFixed(2)} $ успешно отправлены пользователю ${recipientId} (симуляция).`);
-    }
-    
-    function copyUserId() {
-        const userId = window.firebase.userId || 'Не авторизован';
-        try {
-            const tempInput = document.createElement('input');
-            tempInput.value = userId;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            // Используем execCommand для лучшей совместимости в iframe
-            document.execCommand('copy'); 
-            document.body.removeChild(tempInput);
-            showModal("ID Скопирован", `Ваш ID пользователя (${userId}) скопирован в буфер обмена.`);
-        } catch (err) {
-            showModal("Ошибка", "Не удалось скопировать ID. Попробуйте вручную.");
-        }
-    }
-
-    function exchangeTonToUsd() {
-        const tonPrice = gameState.inGameTonPrice;
-        
-        if (gameState.ton >= 0.0001) {
-            const soldTon = gameState.ton;
-            const exchangedUsd = soldTon * tonPrice;
-            
-            gameState.ton = 0; 
-            gameState.usd += exchangedUsd;
-            
-            // Динамика цены: продажа TON понижает курс
-            gameState.inGameTonPrice -= 0.10;
-            if (gameState.inGameTonPrice < 1.0) gameState.inGameTonPrice = 1.0; 
-            gameState.inGameTonPrice = parseFloat(gameState.inGameTonPrice.toFixed(2));
-            
-            saveState();
-            updateUI();
-
-            showModal("Обмен успешен", `✅ Вы продали ${soldTon.toFixed(4)} TON по курсу $${tonPrice.toFixed(2)} и получили ${exchangedUsd.toFixed(2)} USD.`);
-        } else {
-            showModal("Ошибка обмена", "❌ У вас слишком мало TON для продажи (мин. 0.0001).");
-        }
-    }
-
-    // --- 4. ЛОГИКА МАГАЗИНА И NFT ---
-    
-    // Новая функция покупки для 30 GPU
-    function buyGpu(gpuId) {
-        const gpuInfo = GPUS.find(g => g.id === gpuId);
-        const shopFeedback = document.getElementById('shop-feedback');
-        shopFeedback.classList.add('hidden');
-        
-        if (!gpuInfo) return;
-
-        const price = gpuInfo.price;
-        const rateIncrease = gpuInfo.rate;
-        
-        if (gameState.usd >= price) {
-            
-            gameState.usd -= price;
-            
-            // Увеличиваем счетчик этой конкретной GPU
-            gameState.gpuOwned[gpuId] = (gameState.gpuOwned[gpuId] || 0) + 1;
-            
-            // Динамика цены: покупка оборудования повышает спрос и цену на TON
-            gameState.inGameTonPrice += 0.05;
-            gameState.inGameTonPrice = parseFloat(gameState.inGameTonPrice.toFixed(2));
-            
-            saveState(); // Сохранит и пересчитает общую ставку
-            updateUI();
-            
-            showFeedback(shopFeedback, `✅ Куплена ${gpuInfo.name} (+${rateIncrease.toFixed(2)} TON/мин)!`, 'success');
-            
-        } else {
-            showFeedback(shopFeedback, `❌ Недостаточно средств. Нужно ${price} $, у вас ${gameState.usd.toFixed(2)} $.`, 'error');
-        }
-    }
-
-    // Общая функция для ASIC
-    function buyEquipment(type, price, rateIncrease) {
-        const shopFeedback = document.getElementById('shop-feedback');
-        shopFeedback.classList.add('hidden');
-        
-        if (gameState.usd < price) {
-             showFeedback(shopFeedback, `❌ Недостаточно USD. Стоимость: ${price} $.`, 'error');
-             return;
-        }
-        
-        gameState.usd -= price;
-
-        if (type === 'asic') {
-            gameState.asicCount += 1;
-            gameState.miningRatePerMin += rateIncrease; // Добавляем ставку ASIC явно
-        }
-        
-        // Динамика цены: покупка оборудования повышает спрос и цену на TON
-        gameState.inGameTonPrice += 0.05;
-        gameState.inGameTonPrice = parseFloat(gameState.inGameTonPrice.toFixed(2));
-
-        saveState(); // Сработает calculateTotalMiningRate для GPU/NFT, но для ASIC нужно было добавить сразу
-        updateUI();
-        
-        showFeedback(shopFeedback, `✅ Куплен ${type === 'asic' ? 'ASIC-майнер' : 'Оборудование'}!`, 'success');
-    }
-    
-    function buyYoutubeNft() {
-        const price = YOUTUBE_NFT_PRICE;
-        const rateIncrease = YOUTUBE_NFT_RATE_INCREASE;
-        const nftFeedback = document.getElementById('nft-feedback');
-        nftFeedback.classList.add('hidden');
-
-        if (gameState.youtubeNftOwned >= YOUTUBE_NFT_LIMIT) {
-            showFeedback(nftFeedback, "❌ Все 3 NFT уже куплены! Это лимитированное издание.", 'error');
-            return;
-        }
-
-        if (gameState.usd < price) {
-            showFeedback(nftFeedback, `❌ Недостаточно USD. Стоимость NFT: ${price.toLocaleString('ru-RU')} $.`, 'error');
-            return;
-        }
-
-        gameState.usd -= price;
-        gameState.youtubeNftOwned += 1;
-
-        saveState(); // Сохранит и пересчитает общую ставку
-        updateUI();
-        
-        const remaining = YOUTUBE_NFT_LIMIT - gameState.youtubeNftOwned;
-        showFeedback(nftFeedback, `🎉 Куплен YouTube NFT! +${rateIncrease.toFixed(2)} TON/мин. Осталось ${remaining} шт.`, 'success');
-    }
-
-    function buyNFTBox() {
-        const price = 100;
-        const nftFeedback = document.getElementById('nft-feedback');
-        nftFeedback.classList.add('hidden');
-
-        if (gameState.usd < price) {
-            showFeedback(nftFeedback, `❌ Недостаточно USD. Стоимость бокса: ${price} $.`, 'error');
-            return;
-        }
-        
-        gameState.usd -= price;
-        
-        const roll = Math.random();
-        let rewardType = '';
-        
-        if (roll < 0.8) {
-            gameState.nftRareCount += 1;
-            rewardType = 'Редкий (+0.5 TON/мин)';
-        } else {
-            gameState.nftLegendaryCount += 1;
-            rewardType = 'Легендарный (+2.0 TON/мин)';
-        }
-        
-        saveState(); // Сохранит и пересчитает общую ставку
-        updateUI();
-        
-        showFeedback(nftFeedback, `🎉 Поздравляем! Вы получили NFT: ${rewardType}!`, 'success');
-    }
-    
-    // --- 5. ОБНОВЛЕНИЕ UI И УТИЛИТЫ ---
-    
-    // Функция для рендеринга 30 карточек GPU
-    function renderGpuList() {
-        const container = document.getElementById('gpu-list-container');
-        if (!container) return;
-        
-        container.innerHTML = ''; // Очистка
-        
-        GPUS.forEach(gpu => {
-            const ownedCount = gameState.gpuOwned[gpu.id] || 0;
-            const card = document.createElement('div');
-            // Уменьшаем размер текста на мобильном для карточек
-            card.className = 'glass-card p-4 flex flex-col justify-between transition duration-200 text-sm';
-            
-            const isDisabled = gameState.usd < gpu.price;
-            
-            card.innerHTML = `
-                <div class="flex items-center justify-between mb-2">
-                    <p class="text-2xl">${gpu.icon}</p>
-                    <p class="text-lg font-semibold text-white truncate ml-2">${gpu.name}</p>
-                </div>
-                <p class="text-xs text-gray-400">Доход: +${gpu.rate.toFixed(2)} TON/мин</p>
-                <p class="text-xs text-gray-400 mb-3">У вас: <span class="font-bold text-cyan-300">${ownedCount}</span> шт.</p>
-                
-                <div class="flex justify-between items-center mt-auto">
-                    <p class="text-green-400 font-bold text-lg">${gpu.price} $</p>
-                    <button 
-                        onclick="buyGpu('${gpu.id}')" 
-                        class="glass-button ton-gradient text-white text-xs py-2 px-4 ${isDisabled ? 'opacity-30' : ''}"
-                        ${isDisabled ? 'disabled' : ''}
-                    >
-                        Купить
-                    </button>
-                </div>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    function updateUI() {
-        if (!gameState) return;
-
-        // --- Глобальные обновления ---
-        document.getElementById('display-usd').textContent = gameState.usd.toFixed(2);
-        document.getElementById('display-ton').textContent = gameState.ton.toFixed(4);
-        document.getElementById('display-ton-price').textContent = gameState.inGameTonPrice.toFixed(2);
-        document.getElementById('profile-id').textContent = window.firebase.userId || 'Не авторизован';
-        document.getElementById('passive-rate').textContent = gameState.miningRatePerMin.toFixed(2) + ' TON/мин';
-        document.getElementById('current-exchange-rate').textContent = gameState.inGameTonPrice.toFixed(2);
-
-
-        // --- Ферма (Сбор) ---
-        const pendingDisplay = document.getElementById('pending-ton');
-        const collectBtn = document.getElementById('collect-button');
-        
-        pendingDisplay.textContent = pendingPassiveTon.toFixed(4) + ' TON';
-        const collectedInterest = gameState.accumulatedInterest;
-        
-        if (pendingPassiveTon >= 0.0001 || collectedInterest >= 0.0001) {
-            collectBtn.disabled = false;
-        } else {
-            collectBtn.disabled = true;
-        }
-        
-        // --- Магазин (Рендеринг 30 GPU и ASIC) ---
-        if (currentTab === 'shop') {
-            renderGpuList(); // Динамический рендеринг GPU
-            document.getElementById('asic-count').textContent = gameState.asicCount;
-            document.getElementById('buy-asic-button').disabled = gameState.usd < 500;
-        }
-        
-        // --- NFT ---
-        document.getElementById('nft-rare-count').textContent = gameState.nftRareCount;
-        document.getElementById('nft-legendary-count').textContent = gameState.nftLegendaryCount;
-        
-        // --- YouTube NFT ---
-        const stockDisplay = document.getElementById('youtube-nft-stock');
-        const ownedDisplay = document.getElementById('youtube-nft-owned');
-        const buyYoutubeBtn = document.getElementById('buy-youtube-nft-button');
-        
-        const remainingStock = YOUTUBE_NFT_LIMIT - gameState.youtubeNftOwned; // Симуляция глобального остатка
-        stockDisplay.textContent = remainingStock;
-        ownedDisplay.textContent = gameState.youtubeNftOwned;
-
-        if (gameState.youtubeNftOwned >= YOUTUBE_NFT_LIMIT) {
-            buyYoutubeBtn.disabled = true;
-            buyYoutubeBtn.textContent = 'ПРОДАНО';
-        } else {
-            buyYoutubeBtn.disabled = gameState.usd < YOUTUBE_NFT_PRICE;
-            buyYoutubeBtn.textContent = 'Купить NFT';
-        }
-        document.getElementById('buy-nft-button').disabled = gameState.usd < 100;
-        
-        // --- Обмен ---
-        const exchangeBtn = document.getElementById('exchange-button');
-        exchangeBtn.disabled = gameState.ton < 0.0001;
-        
-        // --- Банк ---
-        document.getElementById('bank-usd-balance').textContent = gameState.usd.toFixed(4);
-        document.getElementById('bank-deposit-amount').textContent = gameState.depositAmount.toFixed(4);
-        document.getElementById('bank-interest-rate').textContent = gameState.bankInterestRate.toFixed(2) + '%';
-        document.getElementById('bank-accumulated-interest').textContent = gameState.accumulatedInterest.toFixed(4);
-        document.getElementById('current-interest-rate-upgrade').textContent = gameState.bankInterestRate.toFixed(2);
-
-        // Кнопки депозита/снятия
-        document.getElementById('deposit-100-btn').disabled = gameState.usd < 100;
-        document.getElementById('withdraw-100-btn').disabled = gameState.depositAmount < 100;
-        document.getElementById('deposit-all-btn').disabled = gameState.usd < MIN_USD_ACTION;
-        document.getElementById('withdraw-all-btn').disabled = gameState.depositAmount < MIN_USD_ACTION;
-        document.getElementById('upgrade-interest-btn').disabled = gameState.usd < 500;
-        
-        // --- Кошелек ---
-        document.getElementById('wallet-usd-balance').textContent = gameState.usd.toFixed(4);
-        document.getElementById('wallet-user-id').textContent = window.firebase.userId || 'Ожидание ID...';
-        document.getElementById('send-money-btn').disabled = gameState.usd < MIN_USD_ACTION;
-    }
-    
-    function changeTab(tabName) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-        
-        document.getElementById(`content-${tabName}`).classList.remove('hidden');
-        document.getElementById(`tab-${tabName}`).classList.add('active');
-        currentTab = tabName;
-        
-        // Специальный рендеринг при переключении на Магазин
-        if (tabName === 'shop') {
-            renderGpuList();
-        }
-
-        updateUI(); 
-    }
-
-    // Вспомогательная функция для всплывающих сообщений
-    function showModal(title, message) {
-        document.getElementById('modal-title').textContent = title;
-        document.getElementById('modal-message').innerHTML = message;
-        document.getElementById('modal').classList.remove('hidden');
-    }
-    
-    function closeModal() {
-        document.getElementById('modal').classList.add('hidden');
-    }
-
-    // Вспомогательная функция для обратной связи в разделах
-    function showFeedback(element, message, type) {
-        element.textContent = message;
-        element.classList.remove('hidden', 'bg-red-900/50', 'text-red-300', 'bg-green-900/50', 'text-green-300');
-        
-        if (type === 'success') {
-            element.classList.add('bg-green-900/50', 'text-green-300');
-        } else if (type === 'error') {
-            element.classList.add('bg-red-900/50', 'text-red-300');
-        }
-        element.classList.remove('hidden');
-        setTimeout(() => element.classList.add('hidden'), 4000);
-    }
-
-    // --- 6. ЗАПУСК ПРИЛОЖЕНИЯ ---
-
-    // Главная функция, которая вызывается после инициализации Firebase
-    window.onFirebaseReady = function() {
-        // 1. Загрузка данных и подписка на обновления
-        loadAndSubscribeToState();
-        
-        // 2. Установка интервала для расчета пассивного дохода и процентов
-        setInterval(() => {
-            updateGameMetrics(); 
-            // Сохранение состояния происходит только при сборе/покупке/банковских операциях
-        }, UPDATE_INTERVAL_MS);
-
-        // 3. Настройка UI Telegram (для лучшей интеграции)
-        WebApp.ready(); 
-        WebApp.setBackgroundColor('#0b0f19');
-        WebApp.setHeaderColor('#0b0f19');
-        
-        // 4. Скрытие экрана загрузки и показ контента
-        document.getElementById('loading-overlay').classList.add('hidden');
-        
-        // 5. Установка начальной вкладки
-        changeTab(currentTab);
-        
-        // 6. Первичное обновление UI 
-        if (!gameState) updateUI();
-    };
-
-    // Запуск анимации загрузки при старте
-    document.addEventListener('DOMContentLoaded', () => {
-         // Проверяем, если Firebase уже инициализировался (очень быстро)
-         if (window.firebase.userIsReady) {
-             window.onFirebaseReady();
-         }
-    });
-
-</script>
-
 </body>
 </html>
